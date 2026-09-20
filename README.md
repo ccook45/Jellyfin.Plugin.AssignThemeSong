@@ -257,7 +257,7 @@ The project currently uses **YoutubeExplode 6.6.2** for YouTube access.
 
 ## 📝 Development Status
 
-**Current Version**: **v1.4.19**
+**Current Version**: **v1.4.20**
 
 ### Jellyfin 12 / Fork Maintenance
 
@@ -270,7 +270,7 @@ The project currently uses **YoutubeExplode 6.6.2** for YouTube access.
 - Ensures the plugin logo is included in release packages
 - Uses **YoutubeExplode 6.6.2** for current YouTube compatibility
 
-### v1.4.19
+### v1.4.20
 - ✅ **Managed yt-dlp fallback** - xThemeSong automatically downloads the appropriate official yt-dlp standalone binary when the normal YoutubeExplode path has no audio-only streams
 - ✅ **SHA-256 verification** - the downloaded yt-dlp binary is verified against the official yt-dlp checksum list before use
 - ✅ **Platform detection** - selects the appropriate Windows, macOS, Linux/glibc, or Linux/musl binary for the server architecture
