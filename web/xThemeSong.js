@@ -546,6 +546,7 @@
                 body: formData
             }).then(function(response) {
                 if (response.ok) {
+                    notifyLibraryThemeUpdated(itemId);
                     showMessage(dialog, 'success', 'Theme Song Saved!', 'The theme song has been successfully assigned.', overlay);
                 } else {
                     return response.text().then(function(text) {
@@ -712,6 +713,7 @@
             }
             return response.json();
         }).then(function(result) {
+            notifyLibraryThemeUpdated(itemId);
             showMessage(
                 dialog,
                 'success',
@@ -728,6 +730,12 @@
                 dialog.closest('.xthemesong-overlay')
             );
         });
+    }
+
+    function notifyLibraryThemeUpdated(itemId) {
+        if (window.xThemeSongRefreshLibraryItem) {
+            window.xThemeSongRefreshLibraryItem(itemId);
+        }
     }
 
     function showSelectedFile(file, fileInfoElement) {

@@ -483,6 +483,27 @@
                     renderCurrentLibraryPage();setupLibraryTypeTabs();setupLibraryFilters();
                 }
 
+                // Called by the xThemeSong dialog when a theme is assigned successfully.
+                // Update the in-memory library data and re-render the current page so the
+                // status and statistics change immediately without reloading the whole page.
+                window.xThemeSongRefreshLibraryItem = function(itemId) {
+                    if (!libraryData || !libraryData.libraries) return;
+
+                    var updated = false;
+                    libraryData.libraries.forEach(function(library) {
+                        library.items.forEach(function(item) {
+                            if (String(item.itemId) === String(itemId)) {
+                                item.hasThemeSong = true;
+                                updated = true;
+                            }
+                        });
+                    });
+
+                    if (updated) {
+                        renderCurrentLibraryPage();
+                    }
+                };
+
                 function setupLibraryTypeTabs() {
                     var typeTabs=document.getElementById('libraryTypeTabs');
                     var librarySpecificTabs=document.getElementById('librarySpecificTabs');
