@@ -237,6 +237,128 @@ namespace Jellyfin.Plugin.xThemeSong.Api
             }
         }
 
+        /// <summary>
+        /// Searches YouTube for likely theme songs based on the Jellyfin media item's title and type.
+        /// </summary>
+        [HttpGet("{itemId}/search")]
+        public async Task<ActionResult<List<YouTubeSearchResult>>> SearchYouTubeThemes([FromRoute] string itemId)
+        {
+            var item = _libraryManager.GetItemById(itemId);
+            if (item == null)
+            {
+                return NotFound($"Item {itemId} not found");
+            }
+
+            if (!HasThemeManagementPermission(item))
+            {
+                return Forbid();
+            }
+
+            var mediaType = item is Movie ? "Movie" : item is Series ? "Series" : item.GetType().Name;
+            if (mediaType != "Movie" && mediaType != "Series")
+            {
+                return BadRequest("YouTube theme search is supported for movies and series.");
+            }
+
+            try
+            {
+                var results = await _themeDownloadService.SearchYouTubeThemes(
+                    item.Name,
+                    mediaType,
+                    item.ProductionYear);
+
+                return Ok(results);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error searching YouTube themes for {ItemName}", item.Name);
+                return StatusCode(502, $"YouTube search failed: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Downloads a selected YouTube search result as the item's theme song.
+        /// </summary>
+        [HttpPost("{itemId}/search/download")]
+        public async Task<ActionResult> DownloadYouTubeSearchResult(
+            [FromRoute] string itemId,
+            [FromBody] YouTubeSearchDownloadRequest request)
+        {
+            var item = _libraryManager.GetItemById(itemId);
+            if (item == null)
+            {
+                return NotFound($"Item {itemId} not found");
+            }
+
+            if (!HasThemeManagementPermission(item))
+            {
+                return Forbid();
+            }
+
+            if (string.IsNullOrWhiteSpace(request.VideoId))
+            {
+                return BadRequest("VideoId is required");
+            }
+
+            var itemDirectory = GetThemeDirectory(item);
+            if (string.IsNullOrEmpty(itemDirectory))
+            {
+                return BadRequest("Could not determine item directory");
+            }
+
+            var config = GetConfiguration();
+            var targetType = request.TargetType;
+            if (string.IsNullOrEmpty(targetType) || targetType == "auto")
+            {
+                targetType = item switch
+                {
+                    Series => "Series",
+                    Season => "Season",
+                    Movie => "Movie",
+                    _ => "Movie"
+                };
+            }
+
+            var parentId = request.ParentId;
+            if (string.IsNullOrEmpty(parentId) && item is Season season)
+            {
+                parentId = season.SeriesId.ToString("N");
+            }
+
+            try
+            {
+                _logger.LogInformation(
+                    "Downloading selected YouTube search result {VideoId} for {ItemName} ({TargetType})",
+                    request.VideoId,
+                    item.Name,
+                    targetType);
+
+                var metadata = await _themeDownloadService.DownloadFromYouTube(
+                    request.VideoId,
+                    itemDirectory,
+                    config.AudioBitrate,
+                    default,
+                    targetType,
+                    parentId);
+
+                return Ok(new
+                {
+                    message = "Theme song downloaded successfully",
+                    title = metadata.Title,
+                    youtubeUrl = metadata.YouTubeUrl
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error downloading selected YouTube theme for {ItemName}", item.Name);
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
+        }
+
         [HttpGet("{itemId}/metadata")]
         public ActionResult GetThemeMetadata([FromRoute] string itemId)
         {
@@ -722,6 +844,13 @@ namespace Jellyfin.Plugin.xThemeSong.Api
 
             return input;
         }
+    }
+
+    public class YouTubeSearchDownloadRequest
+    {
+        public string VideoId { get; set; } = string.Empty;
+        public string TargetType { get; set; } = "auto";
+        public string? ParentId { get; set; }
     }
 
     public class ThemeSongRequest

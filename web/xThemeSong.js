@@ -248,6 +248,41 @@
             outline: none;
             border-color: #00a4dc;
         }
+        .xthemesong-search-results {
+            margin-top: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .xthemesong-search-result {
+            background: #252525;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 10px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .xthemesong-search-result-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .xthemesong-search-result-title {
+            color: #fff;
+            font-size: 13px;
+            font-weight: 500;
+            overflow-wrap: anywhere;
+        }
+        .xthemesong-search-result-meta {
+            color: #888;
+            font-size: 11px;
+            margin-top: 4px;
+        }
+        .xthemesong-search-result button {
+            flex-shrink: 0;
+            padding: 7px 10px;
+            font-size: 12px;
+        }
         .xthemesong-inherited {
             background: #1a2a1a;
             border: 1px solid #2a4a2a;
@@ -335,9 +370,16 @@
                 </div>
                 
                 <div class="xthemesong-section">
-                    <label class="xthemesong-label">YouTube URL or Video ID</label>
-                    <input type="text" id="xthemesongYouTube" class="xthemesong-input" 
-                           placeholder="https://www.youtube.com/watch?v=... or video ID">
+                    <label class="xthemesong-label">YouTube Theme Song</label>
+                    <div style="display:flex;gap:8px;">
+                        <input type="text" id="xthemesongYouTube" class="xthemesong-input"
+                               placeholder="Paste a YouTube URL or video ID">
+                        <button type="button" id="xthemesongSearch" class="xthemesong-btn xthemesong-btn-secondary" style="white-space:nowrap;">🔎 Auto Search</button>
+                    </div>
+                    <div style="color:#777;font-size:11px;margin-top:6px;">
+                        Searches YouTube using the media title, type, and optional release year, then ranks short theme-song matches.
+                    </div>
+                    <div id="xthemesongSearchResults" class="xthemesong-search-results" style="display:none;"></div>
                 </div>
                 
                 <div class="xthemesong-section">
@@ -447,6 +489,14 @@
             }
         });
         
+        // Auto-search YouTube for this media item
+        var searchBtn = dialog.querySelector('#xthemesongSearch');
+        if (searchBtn) {
+            searchBtn.addEventListener('click', function() {
+                searchYouTubeThemes(itemId, dialog);
+            });
+        }
+
         // Submit button
         dialog.querySelector('#xthemesongSubmit').addEventListener('click', function() {
             var youtubeUrl = dialog.querySelector('#xthemesongYouTube').value.trim();
@@ -487,6 +537,114 @@
         });
     }
     
+    function escapeHtml(value) {
+        var div = document.createElement('div');
+        div.textContent = value == null ? '' : String(value);
+        return div.innerHTML;
+    }
+
+    function formatSearchDuration(duration) {
+        if (!duration) return 'Unknown duration';
+        var totalSeconds = Math.round(duration.totalSeconds || 0);
+        var minutes = Math.floor(totalSeconds / 60);
+        var seconds = totalSeconds % 60;
+        return minutes + ':' + String(seconds).padStart(2, '0');
+    }
+
+    function searchYouTubeThemes(itemId, dialog) {
+        var searchBtn = dialog.querySelector('#xthemesongSearch');
+        var resultsDiv = dialog.querySelector('#xthemesongSearchResults');
+        if (!searchBtn || !resultsDiv) return;
+
+        searchBtn.disabled = true;
+        searchBtn.textContent = 'Searching...';
+        resultsDiv.style.display = 'block';
+        resultsDiv.innerHTML = '<div style="color:#aaa;padding:8px;">Searching YouTube for likely theme songs...</div>';
+
+        var apiUrl = ApiClient.getUrl('xThemeSong/' + itemId + '/search');
+        fetch(apiUrl, {
+            headers: {
+                'Authorization': 'MediaBrowser Client="xThemeSong", Device="Web", DeviceId="xThemeSong", Version="1.4.8", Token="' + ApiClient.accessToken() + '"'
+            }
+        }).then(function(response) {
+            if (!response.ok) {
+                return response.text().then(function(text) {
+                    throw new Error(text || 'YouTube search failed');
+                });
+            }
+            return response.json();
+        }).then(function(results) {
+            searchBtn.disabled = false;
+            searchBtn.textContent = '🔎 Auto Search';
+
+            if (!results || results.length === 0) {
+                resultsDiv.innerHTML = '<div style="color:#aaa;padding:8px;">No likely YouTube theme songs were found.</div>';
+                return;
+            }
+
+            resultsDiv.innerHTML = results.map(function(result, index) {
+                return '<div class="xthemesong-search-result">' +
+                    '<div class="xthemesong-search-result-info">' +
+                    '<div class="xthemesong-search-result-title">' + escapeHtml(result.title) + '</div>' +
+                    '<div class="xthemesong-search-result-meta">' +
+                    escapeHtml(result.channel || 'Unknown channel') + ' • ' +
+                    formatSearchDuration(result.duration) +
+                    (index === 0 ? ' • Suggested match' : '') +
+                    '</div></div>' +
+                    '<button type="button" class="xthemesong-btn xthemesong-btn-primary" data-video-id="' + escapeHtml(result.videoId) + '" data-video-title="' + escapeHtml(result.title) + '">Download</button>' +
+                    '</div>';
+            }).join('');
+
+            resultsDiv.querySelectorAll('button[data-video-id]').forEach(function(button) {
+                button.addEventListener('click', function() {
+                    downloadYouTubeSearchResult(itemId, dialog, this.getAttribute('data-video-id'), this.getAttribute('data-video-title'));
+                });
+            });
+        }).catch(function(error) {
+            searchBtn.disabled = false;
+            searchBtn.textContent = '🔎 Auto Search';
+            resultsDiv.innerHTML = '<div style="color:#f44336;padding:8px;">Search failed: ' + escapeHtml(error.message || 'Unknown error') + '</div>';
+        });
+    }
+
+    function downloadYouTubeSearchResult(itemId, dialog, videoId, videoTitle) {
+        var targetType = dialog.querySelector('#xthemesongTargetType')?.value || 'auto';
+        showLoading(dialog, 'Downloading "' + videoTitle + '" from YouTube...');
+
+        var apiUrl = ApiClient.getUrl('xThemeSong/' + itemId + '/search/download');
+        fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': 'MediaBrowser Client="xThemeSong", Device="Web", DeviceId="xThemeSong", Version="1.4.8", Token="' + ApiClient.accessToken() + '"',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ videoId: videoId, targetType: targetType })
+        }).then(function(response) {
+            if (!response.ok) {
+                return response.text().then(function(text) {
+                    throw new Error(text || 'Failed to download selected theme');
+                });
+            }
+            return response.json();
+        }).then(function(result) {
+            showMessage(
+                dialog,
+                'success',
+                'Theme Song Saved!',
+                (result.title || videoTitle) + ' has been downloaded and assigned.',
+                dialog.closest('.xthemesong-overlay')
+            );
+        }).catch(function(error) {
+            showMessage(
+                dialog,
+                'error',
+                'Download Failed',
+                error.message || 'Failed to download the selected theme song.',
+                dialog.closest('.xthemesong-overlay')
+            );
+        });
+    }
+
     function showSelectedFile(file, fileInfoElement) {
         var sizeInMB = (file.size / 1024 / 1024).toFixed(2);
         fileInfoElement.textContent = '📎 Selected: ' + file.name + ' (' + sizeInMB + ' MB)';
