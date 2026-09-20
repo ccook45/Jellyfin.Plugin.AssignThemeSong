@@ -156,7 +156,7 @@
         var url = window.ApiClient.getUrl('xThemeSong/preferences?userId=' + userId);
         
         return fetch(url, {
-            headers: { 'X-Emby-Token': window.ApiClient.accessToken() }
+            headers: { 'Authorization': 'MediaBrowser Client="xThemeSong", Device="Web", DeviceId="xThemeSong", Version="1.4.1", Token="' + window.ApiClient.accessToken() + '"' }
         }).then(function(response) {
             if (response.ok) return response.json();
             throw new Error('Failed to fetch preferences');
