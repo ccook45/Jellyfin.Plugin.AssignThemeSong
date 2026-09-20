@@ -240,10 +240,12 @@ namespace Jellyfin.Plugin.xThemeSong.Api
         }
 
         /// <summary>
-        /// Searches YouTube for likely theme songs based on the Jellyfin media item's title and type.
+        /// Searches YouTube for likely theme songs based on the Jellyfin media item's title and type, or a user-provided search override.
         /// </summary>
         [HttpGet("{itemId}/search")]
-        public async Task<ActionResult<List<YouTubeSearchResult>>> SearchYouTubeThemes([FromRoute] string itemId)
+        public async Task<ActionResult<List<YouTubeSearchResult>>> SearchYouTubeThemes(
+            [FromRoute] string itemId,
+            [FromQuery] string? query = null)
         {
             var item = _libraryManager.GetItemById(itemId);
             if (item == null)
@@ -267,7 +269,8 @@ namespace Jellyfin.Plugin.xThemeSong.Api
                 var results = await _themeDownloadService.SearchYouTubeThemes(
                     item.Name,
                     mediaType,
-                    item.ProductionYear);
+                    item.ProductionYear,
+                    query);
 
                 return Ok(results);
             }
