@@ -13,7 +13,6 @@ using Jellyfin.Plugin.xThemeSong.Services;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
-using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -32,13 +31,11 @@ namespace Jellyfin.Plugin.xThemeSong.Api
         public ThemeSongController(
             ILogger<ThemeSongController> logger,
             ILibraryManager libraryManager,
-            ThemeDownloadService themeDownloadService,
-            IUserManager userManager)
+            ThemeDownloadService themeDownloadService)
         {
             _logger = logger;
             _libraryManager = libraryManager;
             _themeDownloadService = themeDownloadService;
-            _userManager = userManager;
         }
 
         /// <summary>
@@ -56,31 +53,25 @@ namespace Jellyfin.Plugin.xThemeSong.Api
         {
             var config = GetConfiguration();
 
-            // Resolve the authenticated user from the ASP.NET claims principal.
-            // Do not access AuthorizationInfo.User here: Jellyfin 12 plugin runtime loading can
-            // otherwise bind against a different User type assembly than the plugin was compiled with.
-            var username = User.Identity?.Name;
-            var currentUser = !string.IsNullOrWhiteSpace(username) ? _userManager.GetUserByName(username) : null;
-            var isAdmin = currentUser != null && _userManager.GetUserDto(currentUser).Policy?.IsAdministrator == true;
+            // Jellyfin 12's authentication middleware puts the effective administrator
+            // role directly on ControllerBase.User. Do not resolve the user through
+            // IUserManager here: doing so creates a binary dependency on IUserManager
+            // methods whose signatures can differ between the host's assembly set.
+            var isAdmin = User.IsInRole("Administrator");
 
-            // Check permission mode
             switch (config.PermissionMode)
             {
                 case ThemePermissionMode.AdminsOnly:
-                    // Only administrators can manage themes
                     return isAdmin;
-                    
+
                 case ThemePermissionMode.LibraryManagers:
-                    // Administrators only for now
-                    // LibraryManager role check would require deeper integration
+                    // Administrators only for now.
                     return isAdmin;
-                    
+
                 case ThemePermissionMode.Everyone:
-                    // All authenticated users
                     return User.Identity?.IsAuthenticated ?? false;
-                    
+
                 default:
-                    // Default to admin-only for safety
                     return isAdmin;
             }
         }
