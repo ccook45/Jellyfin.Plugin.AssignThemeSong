@@ -8,6 +8,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using MediaBrowser.Common.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.xThemeSong.Services;
 
@@ -20,14 +22,18 @@ public sealed class YtDlpManager
     private static readonly HttpClient HttpClient = CreateHttpClient();
 
     private readonly string _toolDirectory;
-    private readonly Microsoft.Extensions.Logging.ILogger<YtDlpManager> _logger;
+    private readonly ILogger<YtDlpManager> _logger;
 
     public YtDlpManager(
-        Microsoft.Extensions.Logging.ILogger<YtDlpManager> logger)
+        IApplicationPaths applicationPaths,
+        ILogger<YtDlpManager> logger)
     {
         _logger = logger;
-        _toolDirectory = Plugin.Instance?.GetManagedToolDirectory()
-            ?? throw new InvalidOperationException("xThemeSong plugin is not initialized.");
+        _toolDirectory = Path.Combine(
+            applicationPaths.DataPath,
+            "xThemeSong",
+            "tools",
+            "yt-dlp");
     }
 
     /// <summary>
