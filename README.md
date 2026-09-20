@@ -1,10 +1,12 @@
 # xThemeSong
 
-A Jellyfin 12 plugin that allows you to download theme songs from YouTube or upload custom MP3 files for your movies and TV shows.
+A Jellyfin 12 plugin that allows you to download theme songs from YouTube or upload custom MP3 files for movies and TV shows.
 
 <p align="center">
 <img alt="Logo" src="https://raw.githubusercontent.com/ccook45/Jellyfin.Plugin.AssignThemeSong/main/images/icon.png" style="width:50%;" />
 </p>
+
+> **Project lineage:** xThemeSong is a continuation/fork of the original Jellyfin Plugin AssignThemeSong project by **Kirtan Patel (@kirtan3d)**. The original project established the core theme-song workflow, Web UI, scheduled downloads, media management, export/import, permissions, and per-user preferences. This fork preserves that history while adding Jellyfin 12 support and subsequent maintenance and feature work. Please see the version history below for the original project's changes as well as the changes made in this fork.
 
 ## ✨ Features
 
@@ -27,6 +29,9 @@ A Jellyfin 12 plugin that allows you to download theme songs from YouTube or upl
 - 📄 **Paginated Media Management** - large libraries are rendered a page at a time to keep the UI responsive
 - 🔎 **YouTube Auto Search** - Find likely theme songs directly from the Assign Theme Song dialog, with ranked candidates and one-click download
 - 🖼️ Lazy-loaded poster thumbnails and deferred audio loading in Media Management
+- 🔄 **Live Media Management updates** - the Media Management status and statistics update immediately after a theme is assigned, without requiring a page refresh
+- 🖼️ **YouTube result thumbnails** - candidate results show YouTube thumbnails when available
+- ▶️ **YouTube verification** - open the selected YouTube result for review before downloading
 
 ### Advanced Features
 - 📤 **Export/Import Theme Mappings** - Backup and migrate themes between servers
@@ -42,7 +47,7 @@ A Jellyfin 12 plugin that allows you to download theme songs from YouTube or upl
 - **.NET**: **.NET 10**
 - **File Transformation Plugin**: **REQUIRED** for Web UI features to work. Install from the [File Transformation plugin](https://github.com/IAmParadox27/jellyfin-plugin-file-transformation)
 - **FFmpeg**: Must be installed on your Jellyfin server (usually bundled with Jellyfin)
-- **Internet Connection**: Required for YouTube downloads
+- **Internet Connection**: Required for YouTube downloads and automatic search
 
 ## 🔧 Installation
 
@@ -86,9 +91,27 @@ A Jellyfin 12 plugin that allows you to download theme songs from YouTube or upl
 
 ### Automatic YouTube Theme Search
 
-From **Assign Theme Song**, click **🔎 Auto Search**. xThemeSong builds a YouTube search from the media item's title, media type, and release year when available. Search results are ranked using title matches, theme/soundtrack terms, and shorter durations. The plugin shows several candidates so you can review the result before downloading it.
+From **Assign Theme Song**, click **🔎 Auto Search**.
 
-This approach is based on the search workflow used by the [jellyfin-theme-downloader](https://github.com/ummmno/jellyfin-theme-downloader), which searches using the media title plus a media-type label and `theme song`, and prefers shorter results. citeturn0view0
+xThemeSong builds multiple targeted YouTube searches from the media item's title, media type, and release year when available. For TV series, searches include variants such as:
+
+- `<title> opening theme song`
+- `<title> opening song`
+- `<title> OP opening`
+- `<title> official opening`
+- `<title> opening full`
+- `<title> opening creditless`
+- `<title> ending theme song`
+- `<title> theme song`
+- `<title> OST opening`
+
+For movies, searches include theme, main-theme, soundtrack, official-theme, instrumental, and OST variants.
+
+Searches run with bounded concurrency to improve response time without creating an uncontrolled number of simultaneous requests. Candidates are deduplicated, scored, and filtered to favor likely theme music while demoting trailers, recaps, reviews, explained videos, full episodes, reactions, and other unrelated results. Up to 10 candidates are returned for review.
+
+The search UI displays the result title, channel, duration, thumbnail, and a **Verify on YouTube** action. You can review a result before using **Download**.
+
+This search workflow was inspired by the search approach used by [jellyfin-theme-downloader](https://github.com/ummmno/jellyfin-theme-downloader), which searches using the media title plus media-type/theme terms and prefers shorter results.
 
 ### Scheduled Task
 
@@ -142,6 +165,7 @@ Access plugin settings in **Dashboard → Plugins → xThemeSong**.
 - **Use Cases**: Server migrations, backups, and bulk management
 
 ### Media Management Tab
+
 The Media Management tab provides an overview of your movies and TV shows:
 
 - **Statistics**: See total media count, items with themes, and items without themes
@@ -152,10 +176,12 @@ The Media Management tab provides an overview of your movies and TV shows:
 - **Bulk Save**: Save URLs for multiple items, then run the scheduled task to download
 - **Pagination**: Choose 25, 50, or 100 items per page and move between pages
 - **Search and Filters**: Search by title and filter by media type, library, and theme status
+- **Live status refresh**: After a theme is successfully assigned from the Assign Theme Song dialog, the affected row and Media Management statistics update immediately without refreshing the whole page
 
 Pagination limits how many rows are rendered at once, which improves responsiveness for large media libraries while retaining the existing search and filtering controls.
 
 ### User Preferences
+
 Access from **Dashboard → Plugins → xThemeSong User Preferences**.
 
 Each user can customize their theme song experience:
@@ -189,6 +215,13 @@ To remove an existing theme song:
 3. Check the scheduled task logs in **Dashboard → Scheduled Tasks**.
 4. Ensure the YouTube URL/ID is valid.
 
+### Automatic YouTube Search returns poor matches
+
+- Review several candidates instead of downloading the first result.
+- Use the **Verify on YouTube** action to inspect the source before downloading.
+- The search is intentionally heuristic; YouTube search results can vary over time.
+- If the correct opening theme is not near the top, try the media title without extra punctuation in the library metadata.
+
 ### Media Management is slow or does not show all items
 
 - Use the built-in pagination controls to limit the number of rows rendered at once.
@@ -210,12 +243,61 @@ The project currently uses **YoutubeExplode 6.6.2** for YouTube access.
 
 ## 📝 Development Status
 
-**Current Version**: **v1.4.9**
+**Current Version**: **v1.4.17**
+
+### Jellyfin 12 / Fork Maintenance
+
+- Targets **Jellyfin 12.0.0** and **.NET 10**
+- Updated Jellyfin package references to 12.0.0
+- Updated authorization handling for Jellyfin 12 role claims
+- Removed the runtime dependency on the incompatible Jellyfin 12 `IUserManager.GetUserByName` API path
+- Added a Jellyfin 12 build/release workflow
+- Corrected plugin assembly/file version reporting
+- Ensures the plugin logo is included in release packages
+- Uses **YoutubeExplode 6.6.2** for current YouTube compatibility
+
+### v1.4.17
+- ✅ **Live Media Management refresh** - Media Management immediately updates the affected item's theme status and statistics after a successful theme assignment
+- ✅ Avoids a full library reload, preserving the performance improvements for large libraries
+
+### v1.4.16
+- ✅ **Faster YouTube search** - runs targeted searches with bounded concurrent queries
+- ✅ Removed unnecessary sequential YouTube metadata hydration because search results already contain the title, channel, duration, and video ID
+- ✅ Keeps candidate deduplication and ranking while reducing avoidable request latency
+
+### v1.4.15
+- ✅ **Expanded opening-theme search coverage** with multiple opening, OP, official, creditless, ending, theme, and OST query variants
+- ✅ Increased the candidate pool and returns up to 10 results
+- ✅ Improved ranking to strongly favor opening/theme music and demote trailers, recaps, reviews, episodes, reactions, and other unrelated content
+
+### v1.4.14
+- ✅ **Fixed Jellyfin 12 thumbnail authentication** for YouTube search results
+- ✅ Added targeted theme-focused search terms for opening/ending/main theme results
+- ✅ Added YouTube thumbnail display and direct result verification workflow
+
+### v1.4.13
+- ✅ **Handled Jellyfin JSON casing** so the search UI works with either CamelCase or PascalCase JSON responses
+- ✅ Restored reliable rendering of result title, channel, duration, URL, and thumbnails across Jellyfin formatter profiles
+
+### v1.4.12
+- ✅ Changed search duration serialization to a numeric duration value for reliable Web UI rendering
+- ✅ Added a Jellyfin-side thumbnail proxy for YouTube thumbnails
+- ✅ Changed YouTube verification to an explicit action that opens the selected YouTube URL
+- ✅ Improved handling of search result metadata and verification links
+
+### v1.4.11
+- ✅ Added YouTube search result thumbnails
+- ✅ Added a **Verify on YouTube** action before download
+- ✅ Added logging/fallback behavior when result metadata hydration fails
+
+### v1.4.10
+- ✅ Published a distinct point release to make the updated YouTube search metadata behavior visible to Jellyfin's plugin update system
 
 ### v1.4.9
 - ✅ **Automatic YouTube Theme Search** - Search YouTube from a movie/series title and rank likely theme-song results
 - ✅ **Candidate Review** - Shows multiple search results with title, channel, and duration before downloading
 - ✅ **One-Click Download** - Download a selected search result directly to the media item's `theme.mp3`
+- ✅ Uses media type and production year when available to improve search queries
 
 ### v1.4.8
 - ✅ Fixed plugin version reporting so the installed assembly/package reports the release version correctly
@@ -229,37 +311,88 @@ The project currently uses **YoutubeExplode 6.6.2** for YouTube access.
 
 ### v1.4.6
 - ✅ Updated **YoutubeExplode** to 6.6.2 for current YouTube compatibility
-- ✅ Updated the plugin for Jellyfin 12 / .NET 10
+- ✅ Jellyfin 12 / .NET 10 maintenance release
 
-### Jellyfin 12 Compatibility
-- ✅ Targets **Jellyfin 12.0.0**
-- ✅ Targets **.NET 10**
-- ✅ Updated authorization handling for Jellyfin 12 role claims
-- ✅ Updated plugin API usage for Jellyfin 12
-- ✅ Release workflow builds and publishes Jellyfin 12-compatible packages
+### v1.4.5
+- ✅ Updated the Jellyfin 12-compatible YouTube download path and released the first stable post-migration package used to diagnose current YouTube compatibility
+- ✅ Retained the Jellyfin 12 / .NET 10 build and release workflow
 
-### Earlier Features
+### v1.4.4
+- ✅ **Jellyfin 12 compatibility release**
+- ✅ Built against **Jellyfin 12.0.0 / .NET 10**
+
+### v1.4.3
+- ✅ Jellyfin 12 compatibility package built against **Jellyfin 12.0.0 / .NET 10**
+
+### v1.4.2
+- ✅ Jellyfin 12 compatibility package built against **Jellyfin 12.0.0 / .NET 10**
+
+### v1.4.1
+- ✅ Jellyfin 12 compatibility package built against **Jellyfin 12.0.0 / .NET 10**
+
+### v1.4.0
+- ✅ **Jellyfin 12 compatibility** - migrated from the Jellyfin 10.11 / .NET 9 baseline to Jellyfin 12.0 APIs and .NET 10
+- ✅ Added a Jellyfin 12 build/release workflow
+- ✅ Established the xThemeSong Jellyfin 12 release/manifest packaging
+
+### v1.3.2 — Original project by Kirtan Patel
+- ✅ **Fixed Media Library Filter Buttons** - Movies/Series filters now work correctly
+- ✅ **Fixed Search by Title** - Search functionality works correctly with the poster column
+- ✅ **Fixed Poster Images** - Poster thumbnails display correctly using Jellyfin's image API
+- ✅ **Fixed Type Matching** - API response type (Series) matches the UI display (Series)
+
+### v1.3.1 — Original project by Kirtan Patel
+- ✅ Fixed Media Library filter buttons for Movies/TV Shows
+- ✅ Fixed search by title
+- ✅ Fixed type matching between the API response (`Series`) and the UI (`TV Shows`)
+
+### v1.3.0 — Original project by Kirtan Patel
 - ✅ **Season/Collection-Level Theme Inheritance** - Assign themes at Series, Season, or BoxSet level
 - ✅ **Media Library Filters** - Filter by theme status and search by title
-- ✅ **Poster Thumbnails** - Display movie/show artwork in library overview
+- ✅ **Poster Thumbnails** - Display movie/show artwork in the library overview
 - ✅ **Library Type Tabs** - Quick filter by Movies/Series or specific library
-- ✅ **Export/Import Theme Mappings** - JSON & CSV export and import with conflict resolution
-- ✅ **Role-Based Access Control** - Admins/Library Managers/Everyone permission modes
-- ✅ **Per-User Theme Preferences** - Enable/disable, volume, duration control per user
-- ✅ **User Preferences Page** - Accessible to all users for customization
-- ✅ **Tabbed Settings Page** - Settings and Media Management tabs
-- ✅ **Bulk YouTube URL Assignment** - Set URLs for multiple items and download via scheduled task
-- ✅ **Statistics Dashboard** - Total media, with themes, without themes counts
-- ✅ **Inline Audio Players** - Preview theme songs directly in the library table
+- ✅ **Minimized Logging** - Reduced verbose logging for cleaner output
+- ✅ **Theme Hierarchy API** - Endpoint for checking theme inheritance
+
+### v1.2.0 — Original project by Kirtan Patel
+- ✅ **Fixed Scheduled Task Error** - Removed deserialization crashes
+- ✅ **Export/Import Theme Mappings** - JSON & CSV export, import with conflict resolution
+- ✅ **Role-Based Access Control** - Admins/Managers/Everyone permission modes
+- ✅ **Per-User Theme Preferences** - Enable/disable, volume, and duration controls per user
+- ✅ **User Preferences Page** - Accessible to all users
+- ✅ **Code Quality** - Reduced warnings from 5 to 1
+- ✅ **Security** - Permission-based API endpoint protection
+
+### v1.1.0 — Original project by Kirtan Patel
+- ✅ **Tabbed Settings Page** - Settings and Media Library tabs
+- ✅ **Media Library Overview** - View media with theme-song status
+- ✅ **Inline Audio Players** - Preview theme songs in the library table
+- ✅ **Bulk YouTube URL Assignment** - Set URLs for multiple items and download via the scheduled task
+- ✅ **Statistics Dashboard** - Total media, with themes, and without themes counts
+- ✅ **Improved Table Styling** - Better visual hierarchy and responsive layout
+
+### v1.0.x — Original project by Kirtan Patel
+- ✅ Plugin loads successfully in Jellyfin
+- ✅ **Web UI integration** - Three-dot menu item for "Assign Theme Song"
+- ✅ **Modern Modal Dialog** with dark theme
+- ✅ **Loading Animations** during download/upload
+- ✅ **Success/Error Messages** in modal dialogs
+- ✅ **Audio Player** for existing theme songs
 - ✅ **Delete Theme Songs** with confirmation
 - ✅ **Drag-and-drop** file upload
+- ✅ YouTube download service using YoutubeExplode v6.5.6
+- ✅ MP3 upload support
+- ✅ API endpoints for theme management
+- ✅ Scheduled task for batch processing
 - ✅ **Custom FFmpeg Path** configuration
 - ✅ **Cross-Platform FFmpeg Detection** - Windows, Mac, Linux, Docker
-- ✅ **File Transformation Plugin Integration**
+- ✅ File Transformation Plugin Integration
 
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit issues or pull requests.
+
+When contributing, please preserve the original project's attribution and version history. Improvements to the Jellyfin 12 fork should be documented in the version history above.
 
 ## 📄 License
 
@@ -267,9 +400,11 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 🙏 Acknowledgments
 
+- **Kirtan Patel (@kirtan3d)** - Original author of the AssignThemeSong project and creator of the original v1.0.x–v1.3.x feature history
 - [Jellyfin](https://github.com/jellyfin/jellyfin) - The media server
 - [YoutubeExplode](https://github.com/Tyrrrz/YoutubeExplode) - YouTube download library
-- Reference plugins: File Transformation, HoverTrailer, and others
+- [jellyfin-theme-downloader](https://github.com/ummmno/jellyfin-theme-downloader) - Reference for the automatic YouTube theme-search workflow
+- File Transformation and other Jellyfin plugin projects referenced by the original project
 
 ## 📧 Support
 
@@ -279,4 +414,4 @@ For issues and questions:
 
 ---
 
-**Note**: Please report any bugs or issues on GitHub.
+**Note:** This project is not officially endorsed by the Jellyfin project. Please report bugs or issues on GitHub.
