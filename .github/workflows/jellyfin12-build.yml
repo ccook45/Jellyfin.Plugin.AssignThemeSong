@@ -1,18 +1,106 @@
-name: Jellyfin 12 build
+name: Jellyfin 12 build and release
 
 on:
   push:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  build:
+  build-release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
-      - run: dotnet build Jellyfin.Plugin.AssignThemeSong.csproj --configuration Release
+
+      - name: Read version
+        id: version
+        shell: bash
+        run: |
+          VERSION="$(sed -n 's:.*<Version>\\([^<]*\\)</Version>.*:\\1:p' Jellyfin.Plugin.AssignThemeSong.csproj | head -1)"
+          test -n "$VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v1.4.0" >> "$GITHUB_OUTPUT"
+          echo "asset=xThemeSong_v1.4.0.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        run: dotnet build Jellyfin.Plugin.AssignThemeSong.csproj --configuration Release
+
+      - name: Package
+        env:
+          ASSET: ${{ steps.version.outputs.asset }}
+        shell: bash
+        run: |
+          rm -rf package
+          mkdir package
+          cp -a bin/Release/net10.0/. package/
+          cd package
+          zip -r "../$ASSET" .
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+          ASSET: ${{ steps.version.outputs.asset }}
+        shell: bash
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$ASSET" --clobber
+          else
+            gh release create "$TAG" "$ASSET" --title "xThemeSong 1.4.0 - Jellyfin 12" --notes "Jellyfin 12 compatibility release. Built against Jellyfin 12.0.0 / .NET 10."
+          fi
+
+      - name: Update manifest
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
+          ASSET: ${{ steps.version.outputs.asset }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+
+          version = os.environ["VERSION"]
+          tag = os.environ["TAG"]
+          asset = Path(os.environ["ASSET"])
+          checksum = hashlib.md5(asset.read_bytes()).hexdigest().upper()
+
+          path = Path("manifest.json")
+          data = json.loads(path.read_text(encoding="utf-8-sig"))
+
+          entry = {
+              "version": version,
+              "checksum": checksum,
+              "changelog": "v1.4.0: Jellyfin 12 compatibility; migrated to .NET 10 and Jellyfin 12.0 APIs.",
+              "targetAbi": "12.0.0.0",
+              "sourceUrl": f"https://github.com/ccook45/Jellyfin.Plugin.AssignThemeSong/releases/download/{tag}/{asset.name}",
+              "timestamp": "2026-09-20T00:00:00Z"
+          }
+
+          for plugin in data:
+              plugin["owner"] = "ccook45"
+              versions = plugin.setdefault("versions", [])
+              versions[:] = [v for v in versions if v.get("version") != version]
+              versions.insert(0, entry)
+
+          path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+          print(f"Manifest checksum: {checksum}")
+          PY
+
+      - name: Commit manifest
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add manifest.json
+          if git diff --cached --quiet; then
+            echo "Manifest already current."
+          else
+            git commit -m "Publish Jellyfin 12 manifest"
+            git push
+          fi
