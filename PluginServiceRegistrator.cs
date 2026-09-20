@@ -14,6 +14,7 @@ namespace Jellyfin.Plugin.xThemeSong
         /// <inheritdoc />
         public void RegisterServices(IServiceCollection serviceCollection, IServerApplicationHost applicationHost)
         {
+            serviceCollection.AddSingleton<YtDlpManager>();
             serviceCollection.AddSingleton<ThemeDownloadService>();
             serviceCollection.AddSingleton<IScheduledTask, ThemeSongTask>();
             // Note: StartupService removed - registration now happens in Plugin constructor
