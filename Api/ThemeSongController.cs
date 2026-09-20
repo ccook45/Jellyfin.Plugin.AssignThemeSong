@@ -63,7 +63,7 @@ namespace Jellyfin.Plugin.xThemeSong.Api
             if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var currentUserId))
             {
                 var currentUser = _userManager.GetUserById(currentUserId);
-                isAdmin = currentUser?.Policy?.IsAdministrator ?? false;
+                isAdmin = currentUser != null && _userManager.GetUserDto(currentUser).Policy?.IsAdministrator == true;
             }
             
             // Check permission mode
