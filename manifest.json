@@ -10,7 +10,7 @@
     "versions": [
       {
         "version": "1.4.4.0",
-        "checksum": "55FEE465CC36F58ED659567522775CA5",
+        "checksum": "950E4BB080279BB3A50DB810251486B0",
         "changelog": "v1.4.4: Jellyfin 12 compatibility; migrated to .NET 10 and Jellyfin 12.0 APIs.",
         "targetAbi": "12.0.0.0",
         "sourceUrl": "https://github.com/ccook45/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.4.4/xThemeSong_v1.4.4.zip"
