@@ -11,6 +11,7 @@ namespace Jellyfin.Plugin.xThemeSong.Models
         public string Channel { get; set; } = string.Empty;
         public TimeSpan? Duration { get; set; }
         public string Url { get; set; } = string.Empty;
+        public string ThumbnailUrl { get; set; } = string.Empty;
         public int MatchScore { get; set; }
     }
 }
