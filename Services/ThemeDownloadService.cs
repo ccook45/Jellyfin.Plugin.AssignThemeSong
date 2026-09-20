@@ -150,7 +150,7 @@ namespace Jellyfin.Plugin.xThemeSong.Services
 
                 var topResults = results
                     .OrderByDescending(r => r.MatchScore)
-                    .ThenBy(r => r.Duration ?? TimeSpan.MaxValue)
+                    .ThenBy(r => r.DurationSeconds <= 0 ? double.MaxValue : r.DurationSeconds)
                     .Take(6)
                     .ToList();
 
