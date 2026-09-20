@@ -8,5 +8,5 @@
   "owner": "ccook45",
   "category": "General",
   "imageUrl": "icon.png",
-  "changelog": "v1.4.4: Jellyfin 12 authentication compatibility; avoid AuthorizationInfo.User runtime binding."
+  "changelog": "v1.4.5: Jellyfin 12 authorization compatibility; use the authenticated administrator role claim instead of IUserManager runtime binding."
 }
