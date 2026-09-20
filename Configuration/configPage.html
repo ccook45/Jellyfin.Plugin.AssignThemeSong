@@ -164,6 +164,7 @@
                                 <p>Loading media library...</p>
                             </div>
                         </div>
+                        <div id="libraryPaginationBottom" style="margin:16px 0;"></div>
                     </div>
                 </div>
             </div>
@@ -425,20 +426,36 @@
                 }
 
                 function updateLibraryPagination(totalItems) {
-                    var pagination=document.getElementById('libraryPagination');
-                    if(!pagination)return;
                     var totalPages=Math.max(1,Math.ceil(totalItems/libraryPageSize));
                     if(libraryCurrentPage>totalPages)libraryCurrentPage=totalPages;
-                    pagination.innerHTML='<div style="display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;">'+
-                        '<button type="button" id="libraryPrevPage" class="xthemesong-btn" '+(libraryCurrentPage<=1?'disabled':'')+'>Previous</button>'+
-                        '<span style="color:#aaa;">Page '+libraryCurrentPage+' of '+totalPages+' ('+totalItems+' matching items)</span>'+
-                        '<button type="button" id="libraryNextPage" class="xthemesong-btn" '+(libraryCurrentPage>=totalPages?'disabled':'')+'>Next</button>'+
-                        '<label style="color:#aaa;margin-left:10px;">Show <select id="libraryPageSize" style="margin-left:5px;padding:5px;background:#2a2a2a;color:#fff;border:1px solid #444;border-radius:4px;">'+
-                        '<option value="25">25</option><option value="50" selected>50</option><option value="100">100</option></select> per page</label></div>';
-                    document.getElementById('libraryPrevPage').addEventListener('click',function(){if(libraryCurrentPage>1){libraryCurrentPage--;renderCurrentLibraryPage();}});
-                    document.getElementById('libraryNextPage').addEventListener('click',function(){if(libraryCurrentPage<totalPages){libraryCurrentPage++;renderCurrentLibraryPage();}});
-                    document.getElementById('libraryPageSize').value=String(libraryPageSize);
-                    document.getElementById('libraryPageSize').addEventListener('change',function(){libraryPageSize=parseInt(this.value,10)||50;libraryCurrentPage=1;renderCurrentLibraryPage();});
+
+                    [
+                        { containerId: 'libraryPagination', suffix: 'Top' },
+                        { containerId: 'libraryPaginationBottom', suffix: 'Bottom' }
+                    ].forEach(function(target) {
+                        var pagination=document.getElementById(target.containerId);
+                        if(!pagination)return;
+
+                        pagination.innerHTML='<div style="display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;">'+
+                            '<button type="button" id="libraryPrevPage'+target.suffix+'" class="xthemesong-btn" '+(libraryCurrentPage<=1?'disabled':'')+'>Previous</button>'+
+                            '<span style="color:#aaa;">Page '+libraryCurrentPage+' of '+totalPages+' ('+totalItems+' matching items)</span>'+
+                            '<button type="button" id="libraryNextPage'+target.suffix+'" class="xthemesong-btn" '+(libraryCurrentPage>=totalPages?'disabled':'')+'>Next</button>'+
+                            '<label style="color:#aaa;margin-left:10px;">Show <select id="libraryPageSize'+target.suffix+'" style="margin-left:5px;padding:5px;background:#2a2a2a;color:#fff;border:1px solid #444;border-radius:4px;">'+
+                            '<option value="25">25</option><option value="50">50</option><option value="100">100</option></select> per page</label></div>';
+
+                        document.getElementById('libraryPrevPage'+target.suffix).addEventListener('click',function(){
+                            if(libraryCurrentPage>1){libraryCurrentPage--;renderCurrentLibraryPage();}
+                        });
+                        document.getElementById('libraryNextPage'+target.suffix).addEventListener('click',function(){
+                            if(libraryCurrentPage<totalPages){libraryCurrentPage++;renderCurrentLibraryPage();}
+                        });
+                        document.getElementById('libraryPageSize'+target.suffix).value=String(libraryPageSize);
+                        document.getElementById('libraryPageSize'+target.suffix).addEventListener('change',function(){
+                            libraryPageSize=parseInt(this.value,10)||50;
+                            libraryCurrentPage=1;
+                            renderCurrentLibraryPage();
+                        });
+                    });
                 }
 
                 function renderCurrentLibraryPage() {
