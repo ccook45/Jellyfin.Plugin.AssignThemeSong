@@ -158,7 +158,7 @@
                             </div>
                         </div>
                         
-                        <div id="libraryContent">
+                        <div id="libraryPagination" style="margin:16px 0;"></div>\n                        <div id="libraryContent">
                             <div style="text-align: center; padding: 40px; color: #888;">
                                 <p>Loading media library...</p>
                             </div>
@@ -396,239 +396,127 @@
                     });
                 }
 
-                function renderLibraryOverview(data) {
-                    var contentDiv = document.getElementById('libraryContent');
-                    var statsDiv = document.getElementById('libraryStats');
-                    
-                    var totalItems = 0;
-                    var withTheme = 0;
-                    var withoutTheme = 0;
-                    
-                    data.libraries.forEach(function(lib) {
-                        lib.items.forEach(function(item) {
-                            totalItems++;
-                            if (item.hasThemeSong) withTheme++;
-                            else withoutTheme++;
-                        });
-                    });
-                    
-                    statsDiv.innerHTML = 
-                        '<div class="xthemesong-stat-box">' +
-                            '<div class="xthemesong-stat-value">' + totalItems + '</div>' +
-                            '<div class="xthemesong-stat-label">Total Media</div>' +
-                        '</div>' +
-                        '<div class="xthemesong-stat-box">' +
-                            '<div class="xthemesong-stat-value" style="color: #4caf50;">' + withTheme + '</div>' +
-                            '<div class="xthemesong-stat-label">With Theme Songs</div>' +
-                        '</div>' +
-                        '<div class="xthemesong-stat-box">' +
-                            '<div class="xthemesong-stat-value" style="color: #ff9800;">' + withoutTheme + '</div>' +
-                            '<div class="xthemesong-stat-label">Without Theme Songs</div>' +
-                        '</div>';
-                    
-                    var html = '';
-                    
-                    data.libraries.forEach(function(library) {
-                        // Determine library type from first item
-                        var libraryType = library.items.length > 0 ? library.items[0].type : 'Unknown';
-                        html += '<div class="xthemesong-library-group" data-library-id="' + library.libraryId + '" data-library-type="' + libraryType + '">';
-                        html += '<h4 class="xthemesong-library-header">' + escapeHtml(library.libraryName) + ' (' + library.items.length + ')</h4>';
-                        html += '<table class="xthemesong-media-table">';
-                        html += '<thead><tr><th width="5%">Poster</th><th width="25%">Title</th><th width="30%">Status</th><th width="30%">YouTube URL</th><th width="10%" style="text-align: right;">Action</th></tr></thead>';
-                        html += '<tbody>';
-                        
-                        library.items.forEach(function(item) {
-                            var typeClass = item.type === 'Movie' ? 'xthemesong-type-movie' : 'xthemesong-type-series';
-                            var statusBadgePlayer = item.hasThemeSong 
-                                ? '<audio class="xthemesong-mini-audio" controls src="' + ApiClient.getUrl('xThemeSong/' + item.itemId + '/audio') + '?api_key=' + ApiClient.accessToken() + '"></audio>'
-                                : '<span class="xthemesong-badge-none">No Theme</span>';
-                            
-                            var posterHtml = '';
-                            if (item.imageUrl) {
-                                posterHtml = '<img src="' + item.imageUrl + '" alt="" style="width: 50px; height: auto; border-radius: 4px;" />';
-                            } else {
-                                posterHtml = '<div style="width: 50px; height: 75px; background: #333; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #666; font-size: 10px;">No Image</div>';
-                            }
+                var libraryPageSize = 50;
+                var libraryCurrentPage = 1;
+                var libraryFilterType = 'all';
+                var libraryFilterId = 'all';
 
-                            html += '<tr data-item-id="' + item.itemId + '">';
-                            html += '<td>' + posterHtml + '</td>';
-                            html += '<td>' + escapeHtml(item.title) + '<span class="' + typeClass + '">' + item.type + '</span></td>';
-                            html += '<td>' + statusBadgePlayer + '</td>';
-                            html += '<td><input type="text" class="xthemesong-url-field" data-item-id="' + item.itemId + '" value="' + escapeHtml(item.youtubeUrl || '') + '" placeholder="https://youtube.com/watch?v=..." /></td>';
-                            html += '<td style="text-align: right;"><button type="button" class="xthemesong-btn" onclick="window.xThemeSongOpenAssign(\'' + item.itemId + '\')">Assign</button></td>';
-                            html += '</tr>';
-                        });
-                        
-                        html += '</tbody></table>';
-                        html += '<div class="xthemesong-save-row">';
-                        html += '<button type="button" class="xthemesong-btn" onclick="window.xThemeSongSaveUrls(\'' + library.libraryId + '\')">Save URLs</button>';
-                        html += '</div>';
-                        html += '</div>';
-                    });
-                    
-                    if (data.libraries.length === 0) {
-                        html = '<div style="text-align: center; padding: 40px; color: #888;">No media found.</div>';
-                    }
-                    
-                    contentDiv.innerHTML = html;
-                    
-                    // Show filter bar
-                    document.getElementById('libraryFilterBar').style.display = 'block';
-                    
-                    document.querySelectorAll('.xthemesong-url-field').forEach(function(input) {
-                        input.addEventListener('input', function() {
-                            pendingChanges[this.getAttribute('data-item-id')] = this.value;
+                function getFilteredLibraryItems() {
+                    if (!libraryData || !libraryData.libraries) return [];
+                    var showWith = document.getElementById('filterWithTheme')?.checked !== false;
+                    var showWithout = document.getElementById('filterWithoutTheme')?.checked !== false;
+                    var searchTerm = (document.getElementById('filterSearch')?.value || '').toLowerCase().trim();
+                    var items = [];
+                    libraryData.libraries.forEach(function(library) {
+                        library.items.forEach(function(item) {
+                            var matchesType = libraryFilterType === 'all' || item.type === libraryFilterType;
+                            var matchesLibrary = libraryFilterId === 'all' || library.libraryId === libraryFilterId;
+                            var matchesTheme = (item.hasThemeSong && showWith) || (!item.hasThemeSong && showWithout);
+                            var matchesSearch = !searchTerm || (item.title || '').toLowerCase().indexOf(searchTerm) !== -1;
+                            if (matchesType && matchesLibrary && matchesTheme && matchesSearch) items.push({ item:item, library:library });
                         });
                     });
-                    
-                    // Setup filter event listeners
-                    setupLibraryFilters();
-                    
-                    // Setup library type tabs
-                    setupLibraryTypeTabs();
+                    items.sort(function(a,b) {
+                        var lc=(a.library.libraryName||'').localeCompare(b.library.libraryName||'');
+                        return lc!==0 ? lc : (a.item.title||'').localeCompare(b.item.title||'');
+                    });
+                    return items;
                 }
-                
+
+                function updateLibraryPagination(totalItems) {
+                    var pagination=document.getElementById('libraryPagination');
+                    if(!pagination)return;
+                    var totalPages=Math.max(1,Math.ceil(totalItems/libraryPageSize));
+                    if(libraryCurrentPage>totalPages)libraryCurrentPage=totalPages;
+                    pagination.innerHTML='<div style="display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;">'+
+                        '<button type="button" id="libraryPrevPage" class="xthemesong-btn" '+(libraryCurrentPage<=1?'disabled':'')+'>Previous</button>'+
+                        '<span style="color:#aaa;">Page '+libraryCurrentPage+' of '+totalPages+' ('+totalItems+' matching items)</span>'+
+                        '<button type="button" id="libraryNextPage" class="xthemesong-btn" '+(libraryCurrentPage>=totalPages?'disabled':'')+'>Next</button>'+
+                        '<label style="color:#aaa;margin-left:10px;">Show <select id="libraryPageSize" style="margin-left:5px;padding:5px;background:#2a2a2a;color:#fff;border:1px solid #444;border-radius:4px;">'+
+                        '<option value="25">25</option><option value="50" selected>50</option><option value="100">100</option></select> per page</label></div>';
+                    document.getElementById('libraryPrevPage').addEventListener('click',function(){if(libraryCurrentPage>1){libraryCurrentPage--;renderCurrentLibraryPage();}});
+                    document.getElementById('libraryNextPage').addEventListener('click',function(){if(libraryCurrentPage<totalPages){libraryCurrentPage++;renderCurrentLibraryPage();}});
+                    document.getElementById('libraryPageSize').value=String(libraryPageSize);
+                    document.getElementById('libraryPageSize').addEventListener('change',function(){libraryPageSize=parseInt(this.value,10)||50;libraryCurrentPage=1;renderCurrentLibraryPage();});
+                }
+
+                function renderCurrentLibraryPage() {
+                    if(!libraryData)return;
+                    var contentDiv=document.getElementById('libraryContent');
+                    var statsDiv=document.getElementById('libraryStats');
+                    var allItems=getFilteredLibraryItems();
+                    var totalItems=0,withTheme=0,withoutTheme=0;
+                    libraryData.libraries.forEach(function(lib){lib.items.forEach(function(item){totalItems++;if(item.hasThemeSong)withTheme++;else withoutTheme++;});});
+                    statsDiv.innerHTML='<div class="xthemesong-stat-box"><div class="xthemesong-stat-value">'+totalItems+'</div><div class="xthemesong-stat-label">Total Media</div></div>'+
+                        '<div class="xthemesong-stat-box"><div class="xthemesong-stat-value" style="color:#4caf50;">'+withTheme+'</div><div class="xthemesong-stat-label">With Theme Songs</div></div>'+
+                        '<div class="xthemesong-stat-box"><div class="xthemesong-stat-value" style="color:#ff9800;">'+withoutTheme+'</div><div class="xthemesong-stat-label">Without Theme Songs</div></div>';
+                    var totalPages=Math.max(1,Math.ceil(allItems.length/libraryPageSize));
+                    if(libraryCurrentPage>totalPages)libraryCurrentPage=totalPages;
+                    var pageItems=allItems.slice((libraryCurrentPage-1)*libraryPageSize,libraryCurrentPage*libraryPageSize);
+                    var grouped={};
+                    pageItems.forEach(function(entry){var key=entry.library.libraryId;if(!grouped[key])grouped[key]={library:entry.library,items:[]};grouped[key].items.push(entry.item);});
+                    var html='';
+                    Object.keys(grouped).forEach(function(key){
+                        var group=grouped[key],library=group.library;
+                        html+='<div class="xthemesong-library-group" data-library-id="'+escapeHtml(library.libraryId)+'" data-library-type="'+(group.items[0]?.type||'Unknown')+'">';
+                        html+='<h4 class="xthemesong-library-header">'+escapeHtml(library.libraryName)+'</h4>';
+                        html+='<table class="xthemesong-media-table"><thead><tr><th width="5%">Poster</th><th width="25%">Title</th><th width="30%">Status</th><th width="30%">YouTube URL</th><th width="10%" style="text-align:right;">Action</th></tr></thead><tbody>';
+                        group.items.forEach(function(item){
+                            var typeClass=item.type==='Movie'?'xthemesong-type-movie':'xthemesong-type-series';
+                            var status=item.hasThemeSong?'<audio class="xthemesong-mini-audio" controls preload="none" src="'+ApiClient.getUrl('xThemeSong/'+item.itemId+'/audio')+'?api_key='+ApiClient.accessToken()+'"></audio>':'<span class="xthemesong-badge-none">No Theme</span>';
+                            var poster=item.imageUrl?'<img loading="lazy" src="'+item.imageUrl+'" alt="" style="width:50px;height:auto;border-radius:4px;" />':'<div style="width:50px;height:75px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#666;font-size:10px;">No Image</div>';
+                            html+='<tr data-item-id="'+escapeHtml(item.itemId)+'"><td>'+poster+'</td><td>'+escapeHtml(item.title)+'<span class="'+typeClass+'">'+item.type+'</span></td><td>'+status+'</td>';
+                            html+='<td><input type="text" class="xthemesong-url-field" data-item-id="'+escapeHtml(item.itemId)+'" value="'+escapeHtml(item.youtubeUrl||'')+'" placeholder="https://youtube.com/watch?v=..." /></td>';
+                            html+='<td style="text-align:right;"><button type="button" class="xthemesong-btn" onclick="window.xThemeSongOpenAssign(\\''+item.itemId+'\\')">Assign</button></td></tr>';
+                        });
+                        html+='</tbody></table><div class="xthemesong-save-row"><button type="button" class="xthemesong-btn" onclick="window.xThemeSongSaveUrls(\\''+library.libraryId+'\\')">Save URLs</button></div></div>';
+                    });
+                    contentDiv.innerHTML=pageItems.length?html:'<div style="text-align:center;padding:40px;color:#888;">No media matches the current filters.</div>';
+                    document.getElementById('libraryFilterBar').style.display='block';
+                    updateLibraryPagination(allItems.length);
+                    document.querySelectorAll('.xthemesong-url-field').forEach(function(input){input.addEventListener('input',function(){pendingChanges[this.getAttribute('data-item-id')]=this.value;});});
+                }
+
+                function renderLibraryOverview(data) {
+                    libraryCurrentPage=1;libraryFilterType='all';libraryFilterId='all';
+                    renderCurrentLibraryPage();setupLibraryTypeTabs();setupLibraryFilters();
+                }
+
                 function setupLibraryTypeTabs() {
-                    var typeTabs = document.getElementById('libraryTypeTabs');
-                    var librarySpecificTabs = document.getElementById('librarySpecificTabs');
-                    
-                    if (!typeTabs || !librarySpecificTabs) return;
-                    
-                    // Show the type tabs container
-                    typeTabs.style.display = 'block';
-                    
-                    // Clear existing library-specific tabs
-                    librarySpecificTabs.innerHTML = '';
-                    
-                    // Create tabs for each library
-                    if (libraryData && libraryData.libraries) {
-                        libraryData.libraries.forEach(function(library) {
-                            var tab = document.createElement('button');
-                            tab.className = 'xthemesong-type-tab xthemesong-library-tab';
-                            tab.setAttribute('data-library', library.libraryId);
-                            tab.style.cssText = 'padding: 8px 16px; border: 1px solid #444; border-radius: 4px; background: #2a2a2a; color: #fff; cursor: pointer;';
-                            tab.textContent = library.libraryName;
-                            librarySpecificTabs.appendChild(tab);
+                    var typeTabs=document.getElementById('libraryTypeTabs');
+                    var librarySpecificTabs=document.getElementById('librarySpecificTabs');
+                    if(!typeTabs||!librarySpecificTabs)return;
+                    typeTabs.style.display='block';librarySpecificTabs.innerHTML='';
+                    if(libraryData&&libraryData.libraries){
+                        libraryData.libraries.forEach(function(library){
+                            var tab=document.createElement('button');
+                            tab.className='xthemesong-type-tab xthemesong-library-tab';
+                            tab.setAttribute('data-library',library.libraryId);
+                            tab.style.cssText='padding:8px 16px;border:1px solid #444;border-radius:4px;background:#2a2a2a;color:#fff;cursor:pointer;';
+                            tab.textContent=library.libraryName;librarySpecificTabs.appendChild(tab);
                         });
                     }
-                    
-                    // Add click handlers for type tabs (All, Movies, TV Shows)
-                    var typeFilterTabs = document.querySelectorAll('.xthemesong-type-tab:not(.xthemesong-library-tab)');
-                    typeFilterTabs.forEach(function(tab) {
-                        tab.addEventListener('click', function() {
-                            // Update active state for type tabs only
-                            typeFilterTabs.forEach(function(t) {
-                                t.classList.remove('active');
-                                t.style.background = '#2a2a2a';
-                            });
-                            // Also deactivate library tabs
-                            document.querySelectorAll('.xthemesong-library-tab').forEach(function(t) {
-                                t.classList.remove('active');
-                                t.style.background = '#2a2a2a';
-                            });
-                            
-                            this.classList.add('active');
-                            this.style.background = '#00a4dc';
-                            
-                            // Filter by type
-                            var typeFilter = this.getAttribute('data-type');
-                            
-                            var libraryGroups = document.querySelectorAll('.xthemesong-library-group');
-                            libraryGroups.forEach(function(group) {
-                                var groupType = group.getAttribute('data-library-type');
-                                
-                                var showGroup = (typeFilter === 'all') || (groupType === typeFilter);
-                                group.style.display = showGroup ? 'block' : 'none';
-                            });
-                            
-                            // Re-apply search/theme filters if they're active
-                            var filterSearch = document.getElementById('filterSearch');
-                            if (filterSearch && filterSearch.value.trim()) {
-                                setupLibraryFilters();
-                            }
-                        });
-                    });
-                    
-                    // Add click handlers for library-specific tabs
-                    var libraryTabs = document.querySelectorAll('.xthemesong-library-tab');
-                    libraryTabs.forEach(function(tab) {
-                        tab.addEventListener('click', function() {
-                            // Update active state for library tabs only
-                            libraryTabs.forEach(function(t) {
-                                t.classList.remove('active');
-                                t.style.background = '#2a2a2a';
-                            });
-                            // Also deactivate type tabs
-                            typeFilterTabs.forEach(function(t) {
-                                t.classList.remove('active');
-                                t.style.background = '#2a2a2a';
-                            });
-                            
-                            this.classList.add('active');
-                            this.style.background = '#00a4dc';
-                            
-                            // Filter by library ID
-                            var libraryId = this.getAttribute('data-library');
-                            
-                            var libraryGroups = document.querySelectorAll('.xthemesong-library-group');
-                            libraryGroups.forEach(function(group) {
-                                var groupId = group.getAttribute('data-library-id');
-                                group.style.display = (groupId === libraryId) ? 'block' : 'none';
-                            });
-                            
-                            // Re-apply search/theme filters if they're active
-                            var filterSearch = document.getElementById('filterSearch');
-                            if (filterSearch && filterSearch.value.trim()) {
-                                setupLibraryFilters();
-                            }
-                        });
-                    });
+                    var typeFilterTabs=document.querySelectorAll('.xthemesong-type-tab:not(.xthemesong-library-tab)');
+                    typeFilterTabs.forEach(function(tab){tab.addEventListener('click',function(){
+                        typeFilterTabs.forEach(function(t){t.classList.remove('active');t.style.background='#2a2a2a';});
+                        document.querySelectorAll('.xthemesong-library-tab').forEach(function(t){t.classList.remove('active');t.style.background='#2a2a2a';});
+                        this.classList.add('active');this.style.background='#00a4dc';libraryFilterType=this.getAttribute('data-type');libraryFilterId='all';libraryCurrentPage=1;renderCurrentLibraryPage();
+                    });});
+                    document.querySelectorAll('.xthemesong-library-tab').forEach(function(tab){tab.addEventListener('click',function(){
+                        document.querySelectorAll('.xthemesong-library-tab').forEach(function(t){t.classList.remove('active');t.style.background='#2a2a2a';});
+                        typeFilterTabs.forEach(function(t){t.classList.remove('active');t.style.background='#2a2a2a';});
+                        this.classList.add('active');this.style.background='#00a4dc';libraryFilterId=this.getAttribute('data-library');libraryFilterType='all';libraryCurrentPage=1;renderCurrentLibraryPage();
+                    });});
                 }
-                
+
                 function setupLibraryFilters() {
-                    var filterWithTheme = document.getElementById('filterWithTheme');
-                    var filterWithoutTheme = document.getElementById('filterWithoutTheme');
-                    var filterSearch = document.getElementById('filterSearch');
-                    
-                    function applyFilters() {
-                        var showWith = filterWithTheme.checked;
-                        var showWithout = filterWithoutTheme.checked;
-                        var searchTerm = filterSearch.value.toLowerCase().trim();
-                        
-                        document.querySelectorAll('.xthemesong-library-group').forEach(function(group) {
-                            // Skip if group is already hidden by type/library filter
-                            if (group.style.display === 'none') return;
-                            
-                            var visibleRows = 0;
-                            var rows = group.querySelectorAll('tbody tr');
-                            
-                            rows.forEach(function(row) {
-                                var hasTheme = row.querySelector('audio') !== null;
-                                // Get title from second td (first td is poster)
-                                var titleCell = row.querySelectorAll('td')[1];
-                                var title = titleCell ? titleCell.textContent.toLowerCase() : '';
-                                
-                                var matchesTheme = (hasTheme && showWith) || (!hasTheme && showWithout);
-                                var matchesSearch = !searchTerm || title.indexOf(searchTerm) !== -1;
-                                
-                                if (matchesTheme && matchesSearch) {
-                                    row.style.display = '';
-                                    visibleRows++;
-                                } else {
-                                    row.style.display = 'none';
-                                }
-                            });
-                            
-                            // Hide entire group if no visible rows
-                            if (visibleRows === 0) {
-                                group.style.display = 'none';
-                            }
-                        });
-                    }
-                    
-                    filterWithTheme.addEventListener('change', applyFilters);
-                    filterWithoutTheme.addEventListener('change', applyFilters);
-                    filterSearch.addEventListener('input', applyFilters);
+                    var filterWithTheme=document.getElementById('filterWithTheme');
+                    var filterWithoutTheme=document.getElementById('filterWithoutTheme');
+                    var filterSearch=document.getElementById('filterSearch');
+                    if(!filterWithTheme||!filterWithoutTheme||!filterSearch)return;
+                    filterWithTheme.onchange=function(){libraryCurrentPage=1;renderCurrentLibraryPage();};
+                    filterWithoutTheme.onchange=function(){libraryCurrentPage=1;renderCurrentLibraryPage();};
+                    filterSearch.oninput=function(){libraryCurrentPage=1;renderCurrentLibraryPage();};
                 }
 
                 function escapeHtml(text) {
