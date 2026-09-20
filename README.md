@@ -9,7 +9,8 @@ A Jellyfin 12 plugin that allows you to download theme songs from YouTube or upl
 ## ✨ Features
 
 ### Core Features
-- 🎵 Download theme songs from YouTube by providing video ID or URL
+- 🎵 Download theme songs from YouTube by providing a video ID or URL
+- 🔎 **Automatic YouTube Theme Search** - Search YouTube from the media item title/type and rank likely theme-song matches
 - 📤 Upload your own MP3 files as theme songs
 - 🎬 Supports both movies and TV shows
 - 📁 Automatically saves theme songs as `theme.mp3` in media folders
@@ -24,6 +25,7 @@ A Jellyfin 12 plugin that allows you to download theme songs from YouTube or upl
 - ✅ Modern modal dialogs for success/error messages
 - 📚 Media Management overview for large libraries
 - 📄 **Paginated Media Management** - large libraries are rendered a page at a time to keep the UI responsive
+- 🔎 **YouTube Auto Search** - Find likely theme songs directly from the Assign Theme Song dialog, with ranked candidates and one-click download
 - 🖼️ Lazy-loaded poster thumbnails and deferred audio loading in Media Management
 
 ### Advanced Features
@@ -75,11 +77,18 @@ A Jellyfin 12 plugin that allows you to download theme songs from YouTube or upl
    - YouTube URL/Video ID input field
    - Drag-and-drop area for MP3 files
 5. Choose one of the following:
+   - Click **"🔎 Auto Search"** to search YouTube using the media title and type, then choose a result to download
    - Enter a YouTube video ID or URL
    - Upload an MP3 file (drag-and-drop or browse)
-6. Click **"Save Theme Song"**.
+6. Click **"Save Theme Song"** when entering a URL manually.
 7. Wait for the loading animation to complete.
 8. A success message will appear when done.
+
+### Automatic YouTube Theme Search
+
+From **Assign Theme Song**, click **🔎 Auto Search**. xThemeSong builds a YouTube search from the media item's title, media type, and release year when available. Search results are ranked using title matches, theme/soundtrack terms, and shorter durations. The plugin shows several candidates so you can review the result before downloading it.
+
+This approach is based on the search workflow used by the [jellyfin-theme-downloader](https://github.com/ummmno/jellyfin-theme-downloader), which searches using the media title plus a media-type label and `theme song`, and prefers shorter results. citeturn0view0
 
 ### Scheduled Task
 
@@ -201,7 +210,12 @@ The project currently uses **YoutubeExplode 6.6.2** for YouTube access.
 
 ## 📝 Development Status
 
-**Current Version**: **v1.4.8**
+**Current Version**: **v1.4.9**
+
+### v1.4.9
+- ✅ **Automatic YouTube Theme Search** - Search YouTube from a movie/series title and rank likely theme-song results
+- ✅ **Candidate Review** - Shows multiple search results with title, channel, and duration before downloading
+- ✅ **One-Click Download** - Download a selected search result directly to the media item's `theme.mp3`
 
 ### v1.4.8
 - ✅ Fixed plugin version reporting so the installed assembly/package reports the release version correctly
