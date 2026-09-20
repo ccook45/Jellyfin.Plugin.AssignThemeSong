@@ -129,12 +129,13 @@ namespace Jellyfin.Plugin.xThemeSong.Services
                     }
 
                     var score = ScoreThemeResult(cleanTitle, typeLabel, video.Title, video.Duration);
+                    _logger.LogInformation("YouTube search result {VideoId}: Title={Title}, Channel={Channel}, DurationSeconds={DurationSeconds}", videoId, video.Title, video.Author?.ChannelTitle ?? string.Empty, video.Duration?.TotalSeconds ?? 0);
                     results.Add(new YouTubeSearchResult
                     {
                         VideoId = videoId,
                         Title = video.Title,
                         Channel = video.Author?.ChannelTitle ?? string.Empty,
-                        Duration = video.Duration,
+                        DurationSeconds = video.Duration?.TotalSeconds ?? 0,
                         Url = $"https://www.youtube.com/watch?v={videoId}",
                         ThumbnailUrl = $"https://i.ytimg.com/vi/{videoId}/hqdefault.jpg",
                         MatchScore = score
@@ -149,7 +150,7 @@ namespace Jellyfin.Plugin.xThemeSong.Services
 
                 var topResults = results
                     .OrderByDescending(r => r.MatchScore)
-                    .ThenBy(r => r.Duration ?? TimeSpan.MaxValue)
+                    .ThenBy(r => r.DurationSeconds <= 0 ? double.MaxValue : r.DurationSeconds)
                     .Take(6)
                     .ToList();
 
@@ -162,10 +163,10 @@ namespace Jellyfin.Plugin.xThemeSong.Services
                         var video = await _youtube.Videos.GetAsync(result.VideoId, cancellationToken);
                         result.Title = video.Title;
                         result.Channel = video.Author?.ChannelTitle ?? result.Channel;
-                        result.Duration = video.Duration ?? result.Duration;
+                        result.DurationSeconds = video.Duration?.TotalSeconds ?? result.DurationSeconds;
                         result.Url = video.Url;
                         result.ThumbnailUrl = $"https://i.ytimg.com/vi/{result.VideoId}/hqdefault.jpg";
-                        _logger.LogInformation("Hydrated YouTube result {VideoId}: Title={Title}, Channel={Channel}, Duration={Duration}", result.VideoId, result.Title, result.Channel, result.Duration);
+                        _logger.LogInformation("Hydrated YouTube result {VideoId}: Title={Title}, Channel={Channel}, DurationSeconds={DurationSeconds}", result.VideoId, result.Title, result.Channel, result.DurationSeconds);
                     }
                     catch (Exception ex) when (ex is not OperationCanceledException)
                     {
