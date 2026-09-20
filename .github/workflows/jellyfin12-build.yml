@@ -26,16 +26,16 @@ jobs:
           mkdir package
           cp -a bin/Release/net10.0/. package/
           cd package
-          zip -r ../xThemeSong_v1.4.15.zip .
+          zip -r ../xThemeSong_v1.4.16.zip .
 
       - name: Create release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if gh release view v1.4.15 >/dev/null 2>&1; then
-            gh release upload v1.4.15 xThemeSong_v1.4.15.zip --clobber
+          if gh release view v1.4.16 >/dev/null 2>&1; then
+            gh release upload v1.4.16 xThemeSong_v1.4.16.zip --clobber
           else
-            gh release create v1.4.15 xThemeSong_v1.4.15.zip --title "xThemeSong 1.4.15 - Jellyfin 12" --notes "Expand opening theme search coverage and return more candidate videos."
+            gh release create v1.4.16 xThemeSong_v1.4.16.zip --title "xThemeSong 1.4.16 - Jellyfin 12" --notes "Speed up YouTube theme search with bounded concurrent queries."
           fi
 
       - name: Update manifest
@@ -45,23 +45,23 @@ jobs:
           import hashlib, json
           from pathlib import Path
 
-          asset = Path("xThemeSong_v1.4.15.zip")
+          asset = Path("xThemeSong_v1.4.16.zip")
           checksum = hashlib.md5(asset.read_bytes()).hexdigest().upper()
           path = Path("manifest.json")
           data = json.loads(path.read_text(encoding="utf-8-sig"))
 
           entry = {
-              "version": "1.4.15.0",
+              "version": "1.4.16.0",
               "checksum": checksum,
-              "changelog": "v1.4.15: Expand opening theme search coverage and return more candidate videos.",
+              "changelog": "v1.4.16: Expand opening theme search coverage and return more candidate videos.",
               "targetAbi": "12.0.0.0",
-              "sourceUrl": "https://github.com/ccook45/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.4.15/xThemeSong_v1.4.15.zip"
+              "sourceUrl": "https://github.com/ccook45/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.4.16/xThemeSong_v1.4.16.zip"
           }
 
           for plugin in data:
               plugin["owner"] = "ccook45"
               versions = plugin.setdefault("versions", [])
-              versions[:] = [v for v in versions if v.get("version") != "1.4.15.0"]
+              versions[:] = [v for v in versions if v.get("version") != "1.4.16.0"]
               versions.insert(0, entry)
 
           path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
