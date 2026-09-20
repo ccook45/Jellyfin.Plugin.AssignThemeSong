@@ -545,10 +545,32 @@
 
     function formatSearchDuration(duration) {
         if (!duration) return 'Unknown duration';
-        var totalSeconds = Math.round(duration.totalSeconds || 0);
-        var minutes = Math.floor(totalSeconds / 60);
-        var seconds = totalSeconds % 60;
-        return minutes + ':' + String(seconds).padStart(2, '0');
+
+        // System.Text.Json serializes TimeSpan as a string such as "00:03:42".
+        if (typeof duration === 'string') {
+            var parts = duration.split(':').map(Number);
+            if (parts.length === 3 && parts.every(function(part) { return !isNaN(part); })) {
+                var hours = parts[0];
+                var minutes = parts[1];
+                var seconds = parts[2];
+                return (hours > 0 ? hours + ':' : '') +
+                    String(minutes + (hours > 0 ? 0 : 0)).padStart(hours > 0 ? 2 : 1, '0') +
+                    ':' + String(seconds).padStart(2, '0');
+            }
+            if (parts.length === 2 && parts.every(function(part) { return !isNaN(part); })) {
+                return parts[0] + ':' + String(parts[1]).padStart(2, '0');
+            }
+            return duration;
+        }
+
+        if (typeof duration.totalSeconds === 'number') {
+            var totalSeconds = Math.round(duration.totalSeconds);
+            var minutes = Math.floor(totalSeconds / 60);
+            var seconds = totalSeconds % 60;
+            return minutes + ':' + String(seconds).padStart(2, '0');
+        }
+
+        return 'Unknown duration';
     }
 
     function searchYouTubeThemes(itemId, dialog) {
@@ -564,7 +586,7 @@
         var apiUrl = ApiClient.getUrl('xThemeSong/' + itemId + '/search');
         fetch(apiUrl, {
             headers: {
-                'Authorization': 'MediaBrowser Client="xThemeSong", Device="Web", DeviceId="xThemeSong", Version="1.4.8", Token="' + ApiClient.accessToken() + '"'
+                'Authorization': 'MediaBrowser Client="xThemeSong", Device="Web", DeviceId="xThemeSong", Version="1.4.9", Token="' + ApiClient.accessToken() + '"'
             }
         }).then(function(response) {
             if (!response.ok) {
@@ -615,7 +637,7 @@
         fetch(apiUrl, {
             method: 'POST',
             headers: {
-                'Authorization': 'MediaBrowser Client="xThemeSong", Device="Web", DeviceId="xThemeSong", Version="1.4.8", Token="' + ApiClient.accessToken() + '"',
+                'Authorization': 'MediaBrowser Client="xThemeSong", Device="Web", DeviceId="xThemeSong", Version="1.4.9", Token="' + ApiClient.accessToken() + '"',
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ videoId: videoId, targetType: targetType })
