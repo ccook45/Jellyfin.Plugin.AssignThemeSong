@@ -35,7 +35,7 @@ jobs:
           if gh release view v1.4.18 >/dev/null 2>&1; then
             gh release upload v1.4.18 xThemeSong_v1.4.18.zip --clobber
           else
-            gh release create v1.4.18 xThemeSong_v1.4.18.zip --title "xThemeSong 1.4.17 - Jellyfin 12" --notes "Fall back to yt-dlp when YouTube provides no audio-only streams."
+            gh release create v1.4.18 xThemeSong_v1.4.18.zip --title "xThemeSong 1.4.18 - Jellyfin 12" --notes "Fall back to yt-dlp when YouTube provides no audio-only streams."
           fi
 
       - name: Update manifest
@@ -53,7 +53,7 @@ jobs:
           entry = {
               "version": "1.4.18.0",
               "checksum": checksum,
-              "changelog": "v1.4.18: Speed up YouTube theme search with bounded concurrent queries.",
+              "changelog": "v1.4.18: Fall back to yt-dlp when YouTube provides no audio-only streams.",
               "targetAbi": "12.0.0.0",
               "sourceUrl": "https://github.com/ccook45/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.4.18/xThemeSong_v1.4.18.zip"
           }
