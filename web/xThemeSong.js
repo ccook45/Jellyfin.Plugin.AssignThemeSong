@@ -637,7 +637,7 @@
 
             resultsDiv.innerHTML = results.map(function(result, index) {
                 return '<div class="xthemesong-search-result">' +
-                    '<img class="xthemesong-search-result-thumb" src="' + escapeHtml(result.thumbnailUrl || (ApiClient.getUrl('xThemeSong/' + itemId + '/search/thumbnail?videoId=' + encodeURIComponent(result.videoId)))) + '" alt="" loading="lazy">' +
+                    '<img class="xthemesong-search-result-thumb" src="' + escapeHtml(ApiClient.getUrl('xThemeSong/' + itemId + '/search/thumbnail?videoId=' + encodeURIComponent(result.videoId) + '&api_key=' + encodeURIComponent(ApiClient.accessToken()))) + '" alt="" loading="lazy">' +
                     '<div class="xthemesong-search-result-info">' +
                     '<div class="xthemesong-search-result-title">' + escapeHtml(result.title) + '</div>' +
                     '<div class="xthemesong-search-result-meta">' +
