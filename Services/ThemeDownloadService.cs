@@ -102,21 +102,33 @@ namespace Jellyfin.Plugin.xThemeSong.Services
 
             var isMovie = string.Equals(mediaType, "Movie", StringComparison.OrdinalIgnoreCase);
             var cleanTitle = title.Trim();
+            var yearSuffix = productionYear.HasValue ? $" {productionYear.Value}" : string.Empty;
 
-            // Use several explicit music/theme-oriented queries. YouTube's ranking can otherwise
-            // surface trailers, recaps, and other videos even when "theme song" is in the query.
+            // YouTube search ranking is query-dependent. Use several deliberately different
+            // theme/opening queries so one poor ranking does not hide the actual opening song.
+            // Avoid quoted phrases here: YouTube's search index can be more restrictive when
+            // the entire Jellyfin title is treated as an exact phrase.
             var queries = isMovie
                 ? new[]
                 {
-                    $"\"{cleanTitle}\" theme song",
-                    $"\"{cleanTitle}\" main theme",
-                    $"\"{cleanTitle}\" soundtrack theme"
+                    $"{cleanTitle} theme song",
+                    $"{cleanTitle} main theme",
+                    $"{cleanTitle} soundtrack theme",
+                    $"{cleanTitle} official theme{yearSuffix}",
+                    $"{cleanTitle} instrumental theme",
+                    $"{cleanTitle} OST theme"
                 }
                 : new[]
                 {
-                    $"\"{cleanTitle}\" theme song",
-                    $"\"{cleanTitle}\" opening theme",
-                    $"\"{cleanTitle}\" ending theme"
+                    $"{cleanTitle} opening theme song",
+                    $"{cleanTitle} opening song",
+                    $"{cleanTitle} OP opening",
+                    $"{cleanTitle} official opening",
+                    $"{cleanTitle} opening full",
+                    $"{cleanTitle} opening creditless",
+                    $"{cleanTitle} ending theme song",
+                    $"{cleanTitle} theme song",
+                    $"{cleanTitle} OST opening"
                 };
 
             _logger.LogInformation(
@@ -134,6 +146,7 @@ namespace Jellyfin.Plugin.xThemeSong.Services
                     cancellationToken.ThrowIfCancellationRequested();
                     _logger.LogInformation("YouTube theme search query: {Query}", query);
 
+                    var queryCount = 0;
                     await foreach (var video in _youtube.Search.GetVideosAsync(query, cancellationToken))
                     {
                         cancellationToken.ThrowIfCancellationRequested();
@@ -144,7 +157,7 @@ namespace Jellyfin.Plugin.xThemeSong.Services
                             continue;
                         }
 
-                        var score = ScoreThemeResult(cleanTitle, video.Title, video.Duration);
+                        var score = ScoreThemeResult(cleanTitle, video.Title, video.Duration, isMovie);
                         results.Add(new YouTubeSearchResult
                         {
                             VideoId = videoId,
@@ -156,14 +169,14 @@ namespace Jellyfin.Plugin.xThemeSong.Services
                             MatchScore = score
                         });
 
-                        // Keep a reasonable candidate pool across all targeted searches.
-                        if (results.Count >= 30)
+                        // Pull enough candidates from every query to give the scorer a real choice.
+                        if (++queryCount >= 15 || results.Count >= 100)
                         {
                             break;
                         }
                     }
 
-                    if (results.Count >= 30)
+                    if (results.Count >= 100)
                     {
                         break;
                     }
@@ -172,7 +185,7 @@ namespace Jellyfin.Plugin.xThemeSong.Services
                 var topResults = results
                     .OrderByDescending(r => r.MatchScore)
                     .ThenBy(r => r.DurationSeconds <= 0 ? double.MaxValue : r.DurationSeconds)
-                    .Take(6)
+                    .Take(10)
                     .ToList();
 
                 // Hydrate only the candidates shown in the UI.
@@ -219,7 +232,8 @@ namespace Jellyfin.Plugin.xThemeSong.Services
         private static int ScoreThemeResult(
             string title,
             string resultTitle,
-            TimeSpan? duration)
+            TimeSpan? duration,
+            bool isMovie)
         {
             var normalizedTitle = NormalizeSearchText(title);
             var normalizedResult = NormalizeSearchText(resultTitle);
@@ -239,26 +253,57 @@ namespace Jellyfin.Plugin.xThemeSong.Services
                 }
             }
 
+            if (normalizedResult.Contains("opening theme song", StringComparison.Ordinal))
+            {
+                score += 85;
+            }
+            else if (normalizedResult.Contains("opening theme", StringComparison.Ordinal))
+            {
+                score += 75;
+            }
+            else if (normalizedResult.Contains("opening song", StringComparison.Ordinal))
+            {
+                score += 70;
+            }
+            else if (normalizedResult.Contains("opening", StringComparison.Ordinal))
+            {
+                score += 50;
+            }
+
+            if (normalizedResult.Contains("official opening", StringComparison.Ordinal))
+            {
+                score += 30;
+            }
+
+            if (normalizedResult.Contains("creditless opening", StringComparison.Ordinal) ||
+                normalizedResult.Contains("opening creditless", StringComparison.Ordinal))
+            {
+                score += 35;
+            }
+
+            if (normalizedResult.Contains("op ", StringComparison.Ordinal) ||
+                normalizedResult.EndsWith(" op", StringComparison.Ordinal))
+            {
+                score += 25;
+            }
+
+            if (normalizedResult.Contains("ending theme", StringComparison.Ordinal) ||
+                normalizedResult.Contains("ending song", StringComparison.Ordinal))
+            {
+                score += isMovie ? 15 : 35;
+            }
+
             if (normalizedResult.Contains("theme song", StringComparison.Ordinal))
             {
                 score += 50;
             }
+            else if (normalizedResult.Contains("main theme", StringComparison.Ordinal))
+            {
+                score += 45;
+            }
             else if (normalizedResult.Contains("theme", StringComparison.Ordinal))
             {
-                score += 35;
-            }
-
-            if (normalizedResult.Contains("opening theme", StringComparison.Ordinal) ||
-                normalizedResult.Contains("opening song", StringComparison.Ordinal) ||
-                normalizedResult.Contains("ending theme", StringComparison.Ordinal) ||
-                normalizedResult.Contains("ending song", StringComparison.Ordinal))
-            {
-                score += 40;
-            }
-
-            if (normalizedResult.Contains("main theme", StringComparison.Ordinal))
-            {
-                score += 35;
+                score += 30;
             }
 
             if (normalizedResult.Contains("soundtrack", StringComparison.Ordinal) ||
@@ -276,27 +321,28 @@ namespace Jellyfin.Plugin.xThemeSong.Services
             // Strongly demote common non-theme search results.
             if (normalizedResult.Contains("trailer", StringComparison.Ordinal))
             {
-                score -= 70;
+                score -= 80;
             }
 
             if (normalizedResult.Contains("recap", StringComparison.Ordinal) ||
                 normalizedResult.Contains("review", StringComparison.Ordinal) ||
                 normalizedResult.Contains("explained", StringComparison.Ordinal))
             {
-                score -= 60;
+                score -= 70;
             }
 
             if (normalizedResult.Contains("full episode", StringComparison.Ordinal) ||
                 normalizedResult.Contains("episode", StringComparison.Ordinal))
             {
-                score -= 55;
+                score -= 65;
             }
 
             if (normalizedResult.Contains("top 10", StringComparison.Ordinal) ||
                 normalizedResult.Contains("top 20", StringComparison.Ordinal) ||
-                normalizedResult.Contains("characters", StringComparison.Ordinal))
+                normalizedResult.Contains("characters", StringComparison.Ordinal) ||
+                normalizedResult.Contains("reaction", StringComparison.Ordinal))
             {
-                score -= 45;
+                score -= 55;
             }
 
             if (duration.HasValue)
@@ -311,7 +357,7 @@ namespace Jellyfin.Plugin.xThemeSong.Services
                 }
                 else
                 {
-                    score -= 25;
+                    score -= 30;
                 }
             }
 
