@@ -9,6 +9,13 @@
     "imageUrl": "https://raw.githubusercontent.com/ccook45/Jellyfin.Plugin.AssignThemeSong/main/images/icon.png",
     "versions": [
       {
+        "version": "1.4.9.0",
+        "checksum": "D063735905F1EE3F361890BB9384DBCA",
+        "changelog": "v1.4.9: Paginate Media Library management to keep large libraries responsive.",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/ccook45/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.4.9/xThemeSong_v1.4.9.zip"
+      },
+      {
         "version": "1.4.8.0",
         "checksum": "97656FBB75B76E90125A04B6A7C0B6BA",
         "changelog": "v1.4.8: Paginate Media Library management to keep large libraries responsive.",
