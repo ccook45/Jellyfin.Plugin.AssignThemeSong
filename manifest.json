@@ -9,6 +9,13 @@
     "imageUrl": "https://raw.githubusercontent.com/ccook45/Jellyfin.Plugin.AssignThemeSong/main/images/icon.png",
     "versions": [
       {
+        "version": "1.4.20.0",
+        "checksum": "3E18840A054074CF99C9E86A73A53218",
+        "changelog": "v1.4.20: Automatically download and manage the official yt-dlp fallback binary.",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/ccook45/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.4.20/xThemeSong_v1.4.20.zip"
+      },
+      {
         "version": "1.4.19.0",
         "checksum": "054FEB7A69A1714F886FFFCC100262AF",
         "changelog": "v1.4.19: Automatically download and manage the official yt-dlp fallback binary.",
