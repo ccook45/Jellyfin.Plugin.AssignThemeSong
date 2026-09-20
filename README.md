@@ -272,7 +272,12 @@ The project currently uses **YoutubeExplode 6.6.2** for YouTube access.
 - Ensures the plugin logo is included in release packages
 - Uses **YoutubeExplode 6.6.2** for current YouTube compatibility
 
-### v1.4.22
+### v1.4.23
+
+- Added a second set of Media Library pagination controls at the bottom of the page, matching the existing top controls.
+- Previous/Next navigation and page-size selection remain synchronized through the same pagination state.
+
+## v1.4.22
 - ✅ **Unavailable-result filtering** - YouTube search results are validated before they are presented for selection, so deleted/private/unavailable videos are filtered out when YoutubeExplode can identify them as unavailable
 - ✅ **Safer search validation** - Automatic theme search validates the highest-ranked candidates while keeping transient/API validation failures from incorrectly hiding usable results
 - ✅ **Consistent override validation** - Manual YouTube URL searches and text searches use the same unavailable-result filtering before download selection
