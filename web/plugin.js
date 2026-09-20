@@ -455,7 +455,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-Emby-Token': window.ApiClient.accessToken()
+                        'Authorization': 'MediaBrowser Client="xThemeSong", Device="Web", DeviceId="xThemeSong", Version="1.4.2", Token="' + window.ApiClient.accessToken() + '"'
                     },
                     body: JSON.stringify(bodyPayload)
                 }).then(r => { if (!r.ok) throw new Error('Server error'); return r.json(); }),
