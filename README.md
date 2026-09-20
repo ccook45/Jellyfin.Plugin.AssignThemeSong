@@ -40,6 +40,7 @@ A Jellyfin 12 plugin that allows you to download theme songs from YouTube or upl
 - 📚 **Media Management** - View media with theme song status at a glance
 - 📝 **Bulk YouTube URL Assignment** - Set URLs for multiple items in settings
 - ⚙️ **Custom FFmpeg Path** - Configure FFmpeg location or use auto-detect
+- 📦 **Managed yt-dlp fallback** - Automatically downloads and verifies the official yt-dlp binary when YoutubeExplode cannot provide an audio-only stream
 
 ## 📋 Requirements
 
@@ -47,7 +48,8 @@ A Jellyfin 12 plugin that allows you to download theme songs from YouTube or upl
 - **.NET**: **.NET 10**
 - **File Transformation Plugin**: **REQUIRED** for Web UI features to work. Install from the [File Transformation plugin](https://github.com/IAmParadox27/jellyfin-plugin-file-transformation)
 - **FFmpeg**: Must be installed on your Jellyfin server (usually bundled with Jellyfin)
-- **Internet Connection**: Required for YouTube downloads and automatic search
+- **Internet Connection**: Required for YouTube downloads, automatic search, and the first managed yt-dlp download
+- **yt-dlp**: No manual installation is required. xThemeSong downloads the appropriate official standalone binary when the fallback is needed
 
 ## 🔧 Installation
 
@@ -88,6 +90,16 @@ A Jellyfin 12 plugin that allows you to download theme songs from YouTube or upl
 6. Click **"Save Theme Song"** when entering a URL manually.
 7. Wait for the loading animation to complete.
 8. A success message will appear when done.
+
+### Managed yt-dlp fallback
+
+xThemeSong normally uses **YoutubeExplode 6.6.2** for YouTube downloads. If Jellyfin/YouTube returns a manifest without a usable audio-only stream, xThemeSong automatically downloads the appropriate official **yt-dlp** standalone binary for the server platform and uses it as a fallback.
+
+The managed binary is stored under Jellyfin's application data directory rather than inside the plugin package, so installing a plugin update does not require re-downloading it unless the managed executable is missing or unusable. The download is verified against yt-dlp's published SHA-256 checksum before it is installed.
+
+Supported managed binaries currently include Windows x64/x86/ARM64, macOS, Linux x64/ARM64, and Alpine/musl Linux x64/ARM64 where yt-dlp publishes standalone builds. An existing `YT_DLP_PATH` environment variable can still be used for advanced/custom deployments.
+
+The official yt-dlp executable includes the yt-dlp EJS components, but current yt-dlp YouTube extraction also relies on a supported JavaScript runtime such as Deno. FFmpeg remains required for audio extraction/post-processing. If a managed yt-dlp download succeeds but YouTube extraction still fails, the Jellyfin log will contain the yt-dlp error.
 
 ### Automatic YouTube Theme Search
 
@@ -211,9 +223,11 @@ To remove an existing theme song:
 ### Theme songs not downloading
 
 1. Check that FFmpeg is installed and accessible.
-2. Verify that you have an internet connection.
+2. Verify that the Jellyfin server has internet access.
 3. Check the scheduled task logs in **Dashboard → Scheduled Tasks**.
 4. Ensure the YouTube URL/ID is valid.
+5. If YoutubeExplode reports no audio-only streams, look for the **managed yt-dlp** download/fallback messages in the Jellyfin log.
+6. If yt-dlp reports a JavaScript-runtime/EJS error, install a supported runtime such as Deno in the Jellyfin environment.
 
 ### Automatic YouTube Search returns poor matches
 
@@ -243,7 +257,7 @@ The project currently uses **YoutubeExplode 6.6.2** for YouTube access.
 
 ## 📝 Development Status
 
-**Current Version**: **v1.4.17**
+**Current Version**: **v1.4.19**
 
 ### Jellyfin 12 / Fork Maintenance
 
@@ -255,6 +269,13 @@ The project currently uses **YoutubeExplode 6.6.2** for YouTube access.
 - Corrected plugin assembly/file version reporting
 - Ensures the plugin logo is included in release packages
 - Uses **YoutubeExplode 6.6.2** for current YouTube compatibility
+
+### v1.4.19
+- ✅ **Managed yt-dlp fallback** - xThemeSong automatically downloads the appropriate official yt-dlp standalone binary when the normal YoutubeExplode path has no audio-only streams
+- ✅ **SHA-256 verification** - the downloaded yt-dlp binary is verified against the official yt-dlp checksum list before use
+- ✅ **Platform detection** - selects the appropriate Windows, macOS, Linux/glibc, or Linux/musl binary for the server architecture
+- ✅ **Persistent tool storage** - managed yt-dlp is stored in Jellyfin's application data rather than the plugin package
+- ✅ **Safer process arguments** - yt-dlp fallback invocation uses structured process arguments instead of shell-style quoting
 
 ### v1.4.17
 - ✅ **Live Media Management refresh** - Media Management immediately updates the affected item's theme status and statistics after a successful theme assignment
