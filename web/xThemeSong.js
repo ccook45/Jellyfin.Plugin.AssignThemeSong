@@ -471,7 +471,7 @@
             
             fetch(apiUrl, {
                 method: 'POST',
-                headers: { 'X-Emby-Token': ApiClient.accessToken() },
+                headers: { 'Authorization': 'MediaBrowser Client="xThemeSong", Device="Web", DeviceId="xThemeSong", Version="1.4.1", Token="' + ApiClient.accessToken() + '"' },
                 body: formData
             }).then(function(response) {
                 if (response.ok) {
@@ -499,14 +499,14 @@
         var hierarchyUrl = ApiClient.getUrl('xThemeSong/' + itemId + '/hierarchy');
         
         var metaPromise = fetch(themeJsonUrl, {
-            headers: { 'X-Emby-Token': ApiClient.accessToken() }
+            headers: { 'Authorization': 'MediaBrowser Client="xThemeSong", Device="Web", DeviceId="xThemeSong", Version="1.4.1", Token="' + ApiClient.accessToken() + '"' }
         }).then(function(response) {
             if (response.ok) return response.json();
             throw new Error('No theme');
         }).catch(function() { return null; });
         
         var hierarchyPromise = fetch(hierarchyUrl, {
-            headers: { 'X-Emby-Token': ApiClient.accessToken() }
+            headers: { 'Authorization': 'MediaBrowser Client="xThemeSong", Device="Web", DeviceId="xThemeSong", Version="1.4.1", Token="' + ApiClient.accessToken() + '"' }
         }).then(function(response) {
             if (response.ok) return response.json();
             throw new Error('No hierarchy');
@@ -600,7 +600,7 @@
         
         fetch(apiUrl, {
             method: 'DELETE',
-            headers: { 'X-Emby-Token': ApiClient.accessToken() }
+            headers: { 'Authorization': 'MediaBrowser Client="xThemeSong", Device="Web", DeviceId="xThemeSong", Version="1.4.1", Token="' + ApiClient.accessToken() + '"' }
         }).then(function(response) {
             if (response.ok) {
                 return response.json();
@@ -752,7 +752,7 @@
                 
                 fetch(apiUrl, {
                     method: 'POST',
-                    headers: { 'X-Emby-Token': ApiClient.accessToken() },
+                    headers: { 'Authorization': 'MediaBrowser Client="xThemeSong", Device="Web", DeviceId="xThemeSong", Version="1.4.1", Token="' + ApiClient.accessToken() + '"' },
                     body: formData
                 }).then(function(response) {
                     if (response.ok) {
