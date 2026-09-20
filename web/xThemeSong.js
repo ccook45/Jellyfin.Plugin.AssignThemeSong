@@ -263,6 +263,14 @@
             gap: 10px;
             align-items: center;
         }
+        .xthemesong-search-result-thumb {
+            width: 120px;
+            height: 68px;
+            object-fit: cover;
+            border-radius: 4px;
+            background: #111;
+            flex-shrink: 0;
+        }
         .xthemesong-search-result-info {
             flex: 1;
             min-width: 0;
@@ -277,6 +285,16 @@
             color: #888;
             font-size: 11px;
             margin-top: 4px;
+        }
+        .xthemesong-search-result-link {
+            color: #00a4dc;
+            font-size: 11px;
+            text-decoration: none;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .xthemesong-search-result-link:hover {
+            text-decoration: underline;
         }
         .xthemesong-search-result button {
             flex-shrink: 0;
@@ -586,7 +604,7 @@
         var apiUrl = ApiClient.getUrl('xThemeSong/' + itemId + '/search');
         fetch(apiUrl, {
             headers: {
-                'Authorization': 'MediaBrowser Client="xThemeSong", Device="Web", DeviceId="xThemeSong", Version="1.4.9", Token="' + ApiClient.accessToken() + '"'
+                'Authorization': 'MediaBrowser Client="xThemeSong", Device="Web", DeviceId="xThemeSong", Version="1.4.10", Token="' + ApiClient.accessToken() + '"'
             }
         }).then(function(response) {
             if (!response.ok) {
@@ -606,13 +624,16 @@
 
             resultsDiv.innerHTML = results.map(function(result, index) {
                 return '<div class="xthemesong-search-result">' +
+                    '<img class="xthemesong-search-result-thumb" src="' + escapeHtml(result.thumbnailUrl || ('https://i.ytimg.com/vi/' + encodeURIComponent(result.videoId) + '/hqdefault.jpg')) + '" alt="" loading="lazy">' +
                     '<div class="xthemesong-search-result-info">' +
                     '<div class="xthemesong-search-result-title">' + escapeHtml(result.title) + '</div>' +
                     '<div class="xthemesong-search-result-meta">' +
                     escapeHtml(result.channel || 'Unknown channel') + ' • ' +
                     formatSearchDuration(result.duration) +
                     (index === 0 ? ' • Suggested match' : '') +
-                    '</div></div>' +
+                    '</div>' +
+                    '<a class="xthemesong-search-result-link" href="' + escapeHtml(result.url) + '" target="_blank" rel="noopener noreferrer">▶ Verify on YouTube</a>' +
+                    '</div>' +
                     '<button type="button" class="xthemesong-btn xthemesong-btn-primary" data-video-id="' + escapeHtml(result.videoId) + '" data-video-title="' + escapeHtml(result.title) + '">Download</button>' +
                     '</div>';
             }).join('');
@@ -637,7 +658,7 @@
         fetch(apiUrl, {
             method: 'POST',
             headers: {
-                'Authorization': 'MediaBrowser Client="xThemeSong", Device="Web", DeviceId="xThemeSong", Version="1.4.9", Token="' + ApiClient.accessToken() + '"',
+                'Authorization': 'MediaBrowser Client="xThemeSong", Device="Web", DeviceId="xThemeSong", Version="1.4.10", Token="' + ApiClient.accessToken() + '"',
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ videoId: videoId, targetType: targetType })
