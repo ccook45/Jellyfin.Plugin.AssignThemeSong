@@ -16,10 +16,14 @@ namespace Jellyfin.Plugin.xThemeSong.Services
     {
         private readonly ILogger<ThemeDownloadService> _logger;
         private readonly YoutubeClient _youtube;
+        private readonly YtDlpManager _ytDlpManager;
 
-        public ThemeDownloadService(ILogger<ThemeDownloadService> logger)
+        public ThemeDownloadService(
+            ILogger<ThemeDownloadService> logger,
+            YtDlpManager ytDlpManager)
         {
             _logger = logger;
+            _ytDlpManager = ytDlpManager;
             _youtube = new YoutubeClient();
         }
 
@@ -611,34 +615,47 @@ namespace Jellyfin.Plugin.xThemeSong.Services
             int bitrate,
             CancellationToken cancellationToken)
         {
-            var ytDlpPath = Environment.GetEnvironmentVariable("YT_DLP_PATH");
-            if (string.IsNullOrWhiteSpace(ytDlpPath))
-            {
-                ytDlpPath = OperatingSystem.IsWindows() ? "yt-dlp.exe" : "yt-dlp";
-            }
-
             try
             {
+                var ytDlpPath = await _ytDlpManager.GetExecutableAsync(cancellationToken);
                 var outputTemplate = Path.Combine(
                     Path.GetDirectoryName(outputPath) ?? Path.GetTempPath(),
                     Path.GetFileNameWithoutExtension(outputPath) + ".%(ext)s");
 
-                using var process = new System.Diagnostics.Process
+                using var process = new System.Diagnostics.Process();
+                process.StartInfo = new System.Diagnostics.ProcessStartInfo
                 {
-                    StartInfo = new System.Diagnostics.ProcessStartInfo
-                    {
-                        FileName = ytDlpPath,
-                        Arguments =
-                            $"--no-playlist --no-warnings -x --audio-format mp3 --audio-quality {bitrate}K " +
-                            $"-o \"{outputTemplate}\" \"https://www.youtube.com/watch?v={videoId}\"",
-                        UseShellExecute = false,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        CreateNoWindow = true
-                    }
+                    FileName = ytDlpPath,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
                 };
 
-                _logger.LogInformation("Trying yt-dlp fallback for YouTube video {VideoId}", videoId);
+                process.StartInfo.ArgumentList.Add("--no-playlist");
+                process.StartInfo.ArgumentList.Add("--no-warnings");
+                process.StartInfo.ArgumentList.Add("--no-update");
+                process.StartInfo.ArgumentList.Add("-x");
+                process.StartInfo.ArgumentList.Add("--audio-format");
+                process.StartInfo.ArgumentList.Add("mp3");
+                process.StartInfo.ArgumentList.Add("--audio-quality");
+                process.StartInfo.ArgumentList.Add($"{bitrate}K");
+
+                var ffmpegPath = GetFfmpegPath();
+                if (File.Exists(ffmpegPath))
+                {
+                    process.StartInfo.ArgumentList.Add("--ffmpeg-location");
+                    process.StartInfo.ArgumentList.Add(ffmpegPath);
+                }
+
+                process.StartInfo.ArgumentList.Add("-o");
+                process.StartInfo.ArgumentList.Add(outputTemplate);
+                process.StartInfo.ArgumentList.Add($"https://www.youtube.com/watch?v={videoId}");
+
+                _logger.LogInformation(
+                    "Trying managed yt-dlp fallback for YouTube video {VideoId} using {Path}",
+                    videoId,
+                    ytDlpPath);
                 process.Start();
 
                 var standardOutputTask = process.StandardOutput.ReadToEndAsync();
@@ -677,11 +694,6 @@ namespace Jellyfin.Plugin.xThemeSong.Services
                 }
 
                 return true;
-            }
-            catch (System.ComponentModel.Win32Exception)
-            {
-                _logger.LogDebug("yt-dlp was not found; skipping fallback for YouTube video {VideoId}", videoId);
-                return false;
             }
             catch (OperationCanceledException)
             {
