@@ -10,7 +10,7 @@
     "versions": [
       {
         "version": "1.4.17.0",
-        "checksum": "A1F3729B4A0C7A2D534F823700DA6E98",
+        "checksum": "864A3CDF85300ABCAA65A776A8F55CBE",
         "changelog": "v1.4.17: Speed up YouTube theme search with bounded concurrent queries.",
         "targetAbi": "12.0.0.0",
         "sourceUrl": "https://github.com/ccook45/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.4.17/xThemeSong_v1.4.17.zip"
