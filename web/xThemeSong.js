@@ -394,11 +394,11 @@
                     <label class="xthemesong-label">YouTube Theme Song</label>
                     <div style="display:flex;gap:8px;">
                         <input type="text" id="xthemesongYouTube" class="xthemesong-input"
-                               placeholder="Paste a YouTube URL or video ID">
-                        <button type="button" id="xthemesongSearch" class="xthemesong-btn xthemesong-btn-secondary" style="white-space:nowrap;">🔎 Auto Search</button>
+                               placeholder="YouTube URL or search terms">
+                        <button type="button" id="xthemesongSearch" class="xthemesong-btn xthemesong-btn-secondary" style="white-space:nowrap;">🔎 Search YouTube</button>
                     </div>
                     <div style="color:#777;font-size:11px;margin-top:6px;">
-                        Searches YouTube using the media title, type, and optional release year, then ranks short theme-song matches.
+                        Leave blank to use the automatic theme search. Enter a YouTube URL to show that video, or enter search terms to search YouTube.
                     </div>
                     <div id="xthemesongSearchResults" class="xthemesong-search-results" style="display:none;"></div>
                 </div>
@@ -528,12 +528,18 @@
                 return;
             }
             
-            // Show loading
-            showLoading(dialog, youtubeUrl ? 'Downloading from YouTube...' : 'Uploading file...');
+            // A YouTube URL or search term is a search override. The selected
+            // result is downloaded using the existing search-result download flow.
+            if (youtubeUrl) {
+                searchYouTubeThemes(itemId, dialog, youtubeUrl);
+                return;
+            }
+
+            // Show loading for an uploaded file.
+            showLoading(dialog, 'Uploading file...');
             
             // Prepare form data
             var formData = new FormData();
-            if (youtubeUrl) formData.append('YouTubeUrl', youtubeUrl);
             if (selectedFile) formData.append('UploadedFile', selectedFile);
             if (targetType && targetType !== 'auto') formData.append('TargetType', targetType);
             
@@ -605,17 +611,21 @@
         return 'Unknown duration';
     }
 
-    function searchYouTubeThemes(itemId, dialog) {
+    function searchYouTubeThemes(itemId, dialog, searchOverride) {
         var searchBtn = dialog.querySelector('#xthemesongSearch');
         var resultsDiv = dialog.querySelector('#xthemesongSearchResults');
         if (!searchBtn || !resultsDiv) return;
 
+        var query = (searchOverride || dialog.querySelector('#xthemesongYouTube')?.value || '').trim();
         searchBtn.disabled = true;
         searchBtn.textContent = 'Searching...';
         resultsDiv.style.display = 'block';
-        resultsDiv.innerHTML = '<div style="color:#aaa;padding:8px;">Searching YouTube for likely theme songs...</div>';
+        resultsDiv.innerHTML = '<div style="color:#aaa;padding:8px;">Searching YouTube...</div>';
 
         var apiUrl = ApiClient.getUrl('xThemeSong/' + itemId + '/search');
+        if (query) {
+            apiUrl += '?query=' + encodeURIComponent(query);
+        }
         fetch(apiUrl, {
             headers: {
                 'Authorization': 'MediaBrowser Client="xThemeSong", Device="Web", DeviceId="xThemeSong", Version="1.4.14", Token="' + ApiClient.accessToken() + '"',
@@ -630,7 +640,7 @@
             return response.json();
         }).then(function(results) {
             searchBtn.disabled = false;
-            searchBtn.textContent = '🔎 Auto Search';
+            searchBtn.textContent = '🔎 Search YouTube';
 
             if (!results || results.length === 0) {
                 resultsDiv.innerHTML = '<div style="color:#aaa;padding:8px;">No likely YouTube theme songs were found.</div>';
@@ -688,7 +698,7 @@
             });
         }).catch(function(error) {
             searchBtn.disabled = false;
-            searchBtn.textContent = '🔎 Auto Search';
+            searchBtn.textContent = '🔎 Search YouTube';
             resultsDiv.innerHTML = '<div style="color:#f44336;padding:8px;">Search failed: ' + escapeHtml(error.message || 'Unknown error') + '</div>';
         });
     }
