@@ -13,6 +13,7 @@ using Jellyfin.Plugin.xThemeSong.Services;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
+using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -26,8 +27,6 @@ namespace Jellyfin.Plugin.xThemeSong.Api
         private readonly ILogger<ThemeSongController> _logger;
         private readonly ILibraryManager _libraryManager;
         private readonly ThemeDownloadService _themeDownloadService;
-        private readonly IUserManager _userManager;
-
         public ThemeSongController(
             ILogger<ThemeSongController> logger,
             ILibraryManager libraryManager,
