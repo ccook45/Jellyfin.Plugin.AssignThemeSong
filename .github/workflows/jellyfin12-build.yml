@@ -53,7 +53,7 @@ jobs:
           entry = {
               "version": "1.4.19.0",
               "checksum": checksum,
-              "changelog": "v1.4.19: Fall back to yt-dlp when YouTube provides no audio-only streams.",
+              "changelog": "v1.4.19: Automatically download and manage the official yt-dlp fallback binary.",
               "targetAbi": "12.0.0.0",
               "sourceUrl": "https://github.com/ccook45/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.4.19/xThemeSong_v1.4.19.zip"
           }
