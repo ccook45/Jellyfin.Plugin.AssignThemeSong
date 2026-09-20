@@ -442,13 +442,79 @@ namespace Jellyfin.Plugin.xThemeSong.Services
                 // Get video details
                 var video = await _youtube.Videos.GetAsync(videoId, cancellationToken);
                 var streamManifest = await _youtube.Videos.Streams.GetManifestAsync(videoId, cancellationToken);
-                
-                // Get the best audio stream
-                var audioStreamInfo = streamManifest.GetAudioOnlyStreams().GetWithHighestBitrate();
-                
-                // Create temporary file for downloaded audio
+
+                // YouTube can return a playable video with no audio-only streams.
+                // Fall back to yt-dlp when it is available on the Jellyfin server.
+                var audioStreams = streamManifest.GetAudioOnlyStreams().ToList();
+                if (audioStreams.Count == 0)
+                {
+                    _logger.LogWarning(
+                        "YouTube returned no audio-only streams for {VideoId}. Attempting yt-dlp fallback.",
+                        videoId);
+
+                    var ytDlpOutput = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.mp3");
+                    if (await TryDownloadWithYtDlpAsync(videoId, ytDlpOutput, bitrate, cancellationToken))
+                    {
+                        try
+                        {
+                            Directory.CreateDirectory(outputDirectory);
+                            var outputPath = Path.Combine(outputDirectory, "theme.mp3");
+                            File.Move(ytDlpOutput, outputPath, true);
+
+                            var metadata = new ThemeMetadata
+                            {
+                                YouTubeId = videoId,
+                                YouTubeUrl = $"https://www.youtube.com/watch?v={videoId}",
+                                Title = video.Title,
+                                Uploader = video.Author.ChannelTitle,
+                                DateAdded = DateTime.UtcNow,
+                                DateModified = DateTime.UtcNow,
+                                IsUserUploaded = false,
+                                TargetType = targetType,
+                                ParentId = parentId,
+                                InheritFromParent = true
+                            };
+
+                            var metadataPath = Path.Combine(outputDirectory, "theme.json");
+                            await File.WriteAllTextAsync(
+                                metadataPath,
+                                JsonSerializer.Serialize(metadata, new JsonSerializerOptions
+                                {
+                                    WriteIndented = true
+                                }),
+                                cancellationToken);
+
+                            _logger.LogInformation(
+                                "Theme song downloaded successfully with yt-dlp fallback: {Title} ({TargetType})",
+                                video.Title,
+                                targetType);
+                            return metadata;
+                        }
+                        finally
+                        {
+                            if (File.Exists(ytDlpOutput))
+                            {
+                                try
+                                {
+                                    File.Delete(ytDlpOutput);
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.LogWarning(ex, "Failed to delete yt-dlp temporary file {TempFile}", ytDlpOutput);
+                                }
+                            }
+                        }
+                    }
+
+                    throw new InvalidOperationException(
+                        $"YouTube did not provide a downloadable audio stream for video '{videoId}'. " +
+                        "Install/update yt-dlp on the Jellyfin server and make sure it is available in PATH " +
+                        "or set the YT_DLP_PATH environment variable, then try again.");
+                }
+
+                var audioStreamInfo = audioStreams.GetWithHighestBitrate();
                 var tempFile = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.{audioStreamInfo.Container.Name}");
-                
+
                 try
                 {
                     // Download the audio
@@ -536,6 +602,95 @@ namespace Jellyfin.Plugin.xThemeSong.Services
             {
                 _logger.LogError(ex, "Error downloading theme song from YouTube");
                 throw;
+            }
+        }
+
+        private async Task<bool> TryDownloadWithYtDlpAsync(
+            string videoId,
+            string outputPath,
+            int bitrate,
+            CancellationToken cancellationToken)
+        {
+            var ytDlpPath = Environment.GetEnvironmentVariable("YT_DLP_PATH");
+            if (string.IsNullOrWhiteSpace(ytDlpPath))
+            {
+                ytDlpPath = OperatingSystem.IsWindows() ? "yt-dlp.exe" : "yt-dlp";
+            }
+
+            try
+            {
+                var outputTemplate = Path.Combine(
+                    Path.GetDirectoryName(outputPath) ?? Path.GetTempPath(),
+                    Path.GetFileNameWithoutExtension(outputPath) + ".%(ext)s");
+
+                using var process = new System.Diagnostics.Process
+                {
+                    StartInfo = new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = ytDlpPath,
+                        Arguments =
+                            $"--no-playlist --no-warnings -x --audio-format mp3 --audio-quality {bitrate}K " +
+                            $"-o \"{outputTemplate}\" \"https://www.youtube.com/watch?v={videoId}\"",
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true
+                    }
+                };
+
+                _logger.LogInformation("Trying yt-dlp fallback for YouTube video {VideoId}", videoId);
+                process.Start();
+
+                var standardOutputTask = process.StandardOutput.ReadToEndAsync();
+                var standardErrorTask = process.StandardError.ReadToEndAsync();
+                await process.WaitForExitAsync(cancellationToken);
+
+                var standardOutput = await standardOutputTask;
+                var standardError = await standardErrorTask;
+
+                if (process.ExitCode != 0)
+                {
+                    _logger.LogWarning(
+                        "yt-dlp fallback failed for {VideoId} with exit code {ExitCode}: {Error}",
+                        videoId,
+                        process.ExitCode,
+                        standardError);
+                    return false;
+                }
+
+                var generatedFile = Path.Combine(
+                    Path.GetDirectoryName(outputPath) ?? Path.GetTempPath(),
+                    Path.GetFileNameWithoutExtension(outputPath) + ".mp3");
+
+                if (!File.Exists(generatedFile))
+                {
+                    _logger.LogWarning(
+                        "yt-dlp reported success for {VideoId}, but the expected MP3 was not created. Output: {Output}",
+                        videoId,
+                        standardOutput);
+                    return false;
+                }
+
+                if (!string.Equals(generatedFile, outputPath, StringComparison.Ordinal))
+                {
+                    File.Move(generatedFile, outputPath, true);
+                }
+
+                return true;
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                _logger.LogDebug("yt-dlp was not found; skipping fallback for YouTube video {VideoId}", videoId);
+                return false;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Unexpected yt-dlp fallback error for YouTube video {VideoId}", videoId);
+                return false;
             }
         }
 
