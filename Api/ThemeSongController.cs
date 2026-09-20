@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Security.Claims;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Jellyfin.Data;
 using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.xThemeSong.Models;
@@ -15,7 +14,6 @@ using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
-using MediaBrowser.Controller.Net;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -30,20 +28,17 @@ namespace Jellyfin.Plugin.xThemeSong.Api
         private readonly ILibraryManager _libraryManager;
         private readonly ThemeDownloadService _themeDownloadService;
         private readonly IUserManager _userManager;
-        private readonly IAuthorizationContext _authorizationContext;
 
         public ThemeSongController(
             ILogger<ThemeSongController> logger,
             ILibraryManager libraryManager,
             ThemeDownloadService themeDownloadService,
-            IUserManager userManager,
-            IAuthorizationContext authorizationContext)
+            IUserManager userManager)
         {
             _logger = logger;
             _libraryManager = libraryManager;
             _themeDownloadService = themeDownloadService;
             _userManager = userManager;
-            _authorizationContext = authorizationContext;
         }
 
         /// <summary>
@@ -57,15 +52,17 @@ namespace Jellyfin.Plugin.xThemeSong.Api
         /// <summary>
         /// Checks if the current user has permission to manage theme songs.
         /// </summary>
-        private async Task<bool> HasThemeManagementPermission(BaseItem? item = null)
+        private bool HasThemeManagementPermission(BaseItem? item = null)
         {
             var config = GetConfiguration();
 
-            // Resolve the authenticated Jellyfin user through the current authorization context.
-            // This avoids IUserManager.GetUserById, whose runtime signature changed in Jellyfin 12.
-            var authInfo = await _authorizationContext.GetAuthorizationInfo(Request);
-            var isAdmin = authInfo.User != null && _userManager.GetUserDto(authInfo.User).Policy?.IsAdministrator == true;
-            
+            // Resolve the authenticated user from the ASP.NET claims principal.
+            // Do not access AuthorizationInfo.User here: Jellyfin 12 plugin runtime loading can
+            // otherwise bind against a different User type assembly than the plugin was compiled with.
+            var username = User.Identity?.Name;
+            var currentUser = !string.IsNullOrWhiteSpace(username) ? _userManager.GetUserByName(username) : null;
+            var isAdmin = currentUser != null && _userManager.GetUserDto(currentUser).Policy?.IsAdministrator == true;
+
             // Check permission mode
             switch (config.PermissionMode)
             {
@@ -141,7 +138,7 @@ namespace Jellyfin.Plugin.xThemeSong.Api
             }
 
             // Check permissions
-            if (!await HasThemeManagementPermission(item))
+            if (!HasThemeManagementPermission(item))
             {
                 return Forbid();
             }
