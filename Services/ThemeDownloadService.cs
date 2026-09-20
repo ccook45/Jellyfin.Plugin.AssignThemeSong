@@ -146,11 +146,31 @@ namespace Jellyfin.Plugin.xThemeSong.Services
                     }
                 }
 
-                return results
+                var topResults = results
                     .OrderByDescending(r => r.MatchScore)
                     .ThenBy(r => r.Duration ?? TimeSpan.MaxValue)
                     .Take(6)
                     .ToList();
+
+                // Search results can omit channel and duration metadata depending on YouTube's
+                // response. Hydrate the small set we actually show in the UI from the video endpoint.
+                foreach (var result in topResults)
+                {
+                    try
+                    {
+                        var video = await _youtube.Videos.GetAsync(result.VideoId, cancellationToken);
+                        result.Title = video.Title;
+                        result.Channel = video.Author?.ChannelTitle ?? result.Channel;
+                        result.Duration = video.Duration ?? result.Duration;
+                        result.Url = video.Url;
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    {
+                        _logger.LogDebug(ex, "Could not hydrate YouTube search result {VideoId}", result.VideoId);
+                    }
+                }
+
+                return topResults;
             }
             catch (OperationCanceledException)
             {
