@@ -15,6 +15,7 @@ using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Controller.Net;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -29,17 +30,20 @@ namespace Jellyfin.Plugin.xThemeSong.Api
         private readonly ILibraryManager _libraryManager;
         private readonly ThemeDownloadService _themeDownloadService;
         private readonly IUserManager _userManager;
+        private readonly IAuthorizationContext _authorizationContext;
 
         public ThemeSongController(
             ILogger<ThemeSongController> logger,
             ILibraryManager libraryManager,
             ThemeDownloadService themeDownloadService,
-            IUserManager userManager)
+            IUserManager userManager,
+            IAuthorizationContext authorizationContext)
         {
             _logger = logger;
             _libraryManager = libraryManager;
             _themeDownloadService = themeDownloadService;
             _userManager = userManager;
+            _authorizationContext = authorizationContext;
         }
 
         /// <summary>
@@ -53,18 +57,14 @@ namespace Jellyfin.Plugin.xThemeSong.Api
         /// <summary>
         /// Checks if the current user has permission to manage theme songs.
         /// </summary>
-        private bool HasThemeManagementPermission(BaseItem? item = null)
+        private async Task<bool> HasThemeManagementPermission(BaseItem? item = null)
         {
             var config = GetConfiguration();
-            
-            // Check if user is an administrator using role claim
-            var isAdmin = false;
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var currentUserId))
-            {
-                var currentUser = _userManager.GetUserById(currentUserId);
-                isAdmin = currentUser != null && _userManager.GetUserDto(currentUser).Policy?.IsAdministrator == true;
-            }
+
+            // Resolve the authenticated Jellyfin user through the current authorization context.
+            // This avoids IUserManager.GetUserById, whose runtime signature changed in Jellyfin 12.
+            var authInfo = await _authorizationContext.GetAuthorizationInfo(Request);
+            var isAdmin = authInfo.User != null && _userManager.GetUserDto(authInfo.User).Policy?.IsAdministrator == true;
             
             // Check permission mode
             switch (config.PermissionMode)
@@ -141,7 +141,7 @@ namespace Jellyfin.Plugin.xThemeSong.Api
             }
 
             // Check permissions
-            if (!HasThemeManagementPermission(item))
+            if (!await HasThemeManagementPermission(item))
             {
                 return Forbid();
             }
