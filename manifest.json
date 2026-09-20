@@ -9,6 +9,13 @@
     "imageUrl": "https://raw.githubusercontent.com/ccook45/Jellyfin.Plugin.AssignThemeSong/main/images/icon.png",
     "versions": [
       {
+        "version": "1.4.22.0",
+        "checksum": "3BCB0A67A6BDEC5021076B9F46E870ED",
+        "changelog": "v1.4.22: Filter unavailable YouTube search results before selection and improve search-result validation while retaining YoutubeExplode-first search and yt-dlp fallback.",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/ccook45/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.4.22/xThemeSong_v1.4.22.zip"
+      },
+      {
         "version": "1.4.21.0",
         "checksum": "9A4D567749946D6218BD75CA44AED0F7",
         "changelog": "v1.4.21: Add YouTube URL and manual search overrides to the assignment search UI, with YoutubeExplode-first search and yt-dlp fallback.",
