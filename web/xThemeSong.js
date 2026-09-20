@@ -617,7 +617,7 @@
         var apiUrl = ApiClient.getUrl('xThemeSong/' + itemId + '/search');
         fetch(apiUrl, {
             headers: {
-                'Authorization': 'MediaBrowser Client="xThemeSong", Device="Web", DeviceId="xThemeSong", Version="1.4.12", Token="' + ApiClient.accessToken() + '"'
+                'Authorization': 'MediaBrowser Client="xThemeSong", Device="Web", DeviceId="xThemeSong", Version="1.4.13", Token="' + ApiClient.accessToken() + '"'
             }
         }).then(function(response) {
             if (!response.ok) {
@@ -635,9 +635,30 @@
                 return;
             }
 
+            // Jellyfin can negotiate either CamelCase or PascalCase JSON profiles.
+            // Normalize both forms so the search UI works regardless of the server's formatter.
+            results = results.map(function(result) {
+                var videoId = result.videoId || result.VideoId || '';
+                var title = result.title || result.Title || '';
+                var channel = result.channel || result.Channel || '';
+                var durationSeconds = result.durationSeconds ?? result.DurationSeconds ?? 0;
+                var url = result.url || result.Url || (videoId ? 'https://www.youtube.com/watch?v=' + videoId : '');
+                return {
+                    videoId: videoId,
+                    title: title,
+                    channel: channel,
+                    durationSeconds: durationSeconds,
+                    url: url
+                };
+            });
+
             resultsDiv.innerHTML = results.map(function(result, index) {
+                var thumbnailUrl = ApiClient.getUrl(
+                    'xThemeSong/' + itemId + '/search/thumbnail?videoId=' +
+                    encodeURIComponent(result.videoId) +
+                    '&api_key=' + encodeURIComponent(ApiClient.accessToken()));
                 return '<div class="xthemesong-search-result">' +
-                    '<img class="xthemesong-search-result-thumb" src="' + escapeHtml(ApiClient.getUrl('xThemeSong/' + itemId + '/search/thumbnail?videoId=' + encodeURIComponent(result.videoId) + '&api_key=' + encodeURIComponent(ApiClient.accessToken()))) + '" alt="" loading="lazy">' +
+                    '<img class="xthemesong-search-result-thumb" src="' + escapeHtml(thumbnailUrl) + '" alt="" loading="lazy">' +
                     '<div class="xthemesong-search-result-info">' +
                     '<div class="xthemesong-search-result-title">' + escapeHtml(result.title) + '</div>' +
                     '<div class="xthemesong-search-result-meta">' +
