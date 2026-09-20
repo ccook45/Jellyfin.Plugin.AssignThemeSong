@@ -10,7 +10,7 @@
     "versions": [
       {
         "version": "1.4.8.0",
-        "checksum": "70C31ED3DAA4F9A99926F0B01E2FCFB6",
+        "checksum": "97656FBB75B76E90125A04B6A7C0B6BA",
         "changelog": "v1.4.8: Paginate Media Library management to keep large libraries responsive.",
         "targetAbi": "12.0.0.0",
         "sourceUrl": "https://github.com/ccook45/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.4.8/xThemeSong_v1.4.8.zip"
