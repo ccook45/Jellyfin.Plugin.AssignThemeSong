@@ -97,8 +97,14 @@ namespace Jellyfin.Plugin.xThemeSong.Services
             string title,
             string mediaType,
             int? productionYear = null,
+            string? searchOverride = null,
             CancellationToken cancellationToken = default)
         {
+            if (!string.IsNullOrWhiteSpace(searchOverride))
+            {
+                return await SearchYouTubeOverrideAsync(searchOverride.Trim(), cancellationToken);
+            }
+
             if (string.IsNullOrWhiteSpace(title))
             {
                 return new List<YouTubeSearchResult>();
@@ -194,6 +200,234 @@ namespace Jellyfin.Plugin.xThemeSong.Services
                 _logger.LogError(ex, "YouTube theme search failed for {Title}", title);
                 throw;
             }
+        }
+
+        private async Task<List<YouTubeSearchResult>> SearchYouTubeOverrideAsync(
+            string input,
+            CancellationToken cancellationToken)
+        {
+            if (TryExtractYouTubeVideoId(input, out var videoId))
+            {
+                _logger.LogInformation("Searching YouTube for exact video URL: {VideoId}", videoId);
+
+                try
+                {
+                    var video = await _youtube.Videos.GetAsync(videoId, cancellationToken);
+                    return new List<YouTubeSearchResult>
+                    {
+                        new YouTubeSearchResult
+                        {
+                            VideoId = video.Id.Value,
+                            Title = video.Title,
+                            Channel = video.Author?.ChannelTitle ?? string.Empty,
+                            DurationSeconds = video.Duration?.TotalSeconds ?? 0,
+                            Url = $"https://www.youtube.com/watch?v={video.Id.Value}",
+                            ThumbnailUrl = $"https://i.ytimg.com/vi/{video.Id.Value}/hqdefault.jpg",
+                            MatchScore = 1000
+                        }
+                    };
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    _logger.LogWarning(ex, "YoutubeExplode could not load exact YouTube video {VideoId}; trying yt-dlp.", videoId);
+                    var fallback = await SearchYouTubeWithYtDlpAsync(input, cancellationToken);
+                    if (fallback.Count > 0)
+                    {
+                        return fallback.Take(1).ToList();
+                    }
+                    throw;
+                }
+            }
+
+            _logger.LogInformation("Searching YouTube using manual search override: {Query}", input);
+
+            try
+            {
+                var results = new List<YouTubeSearchResult>();
+                await foreach (var video in _youtube.Search.GetVideosAsync(input, cancellationToken))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    var id = video.Id.Value;
+                    if (string.IsNullOrWhiteSpace(id))
+                    {
+                        continue;
+                    }
+
+                    results.Add(new YouTubeSearchResult
+                    {
+                        VideoId = id,
+                        Title = video.Title,
+                        Channel = video.Author?.ChannelTitle ?? string.Empty,
+                        DurationSeconds = video.Duration?.TotalSeconds ?? 0,
+                        Url = $"https://www.youtube.com/watch?v={id}",
+                        ThumbnailUrl = $"https://i.ytimg.com/vi/{id}/hqdefault.jpg",
+                        MatchScore = 0
+                    });
+
+                    if (results.Count >= 10)
+                    {
+                        break;
+                    }
+                }
+
+                if (results.Count > 0)
+                {
+                    return results;
+                }
+
+                _logger.LogWarning("YoutubeExplode returned no results for manual YouTube search: {Query}", input);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "YoutubeExplode manual YouTube search failed: {Query}; trying yt-dlp.", input);
+            }
+
+            return await SearchYouTubeWithYtDlpAsync(input, cancellationToken);
+        }
+
+        private async Task<List<YouTubeSearchResult>> SearchYouTubeWithYtDlpAsync(
+            string query,
+            CancellationToken cancellationToken)
+        {
+            var executable = await _ytDlpManager.GetExecutableAsync(cancellationToken);
+            using var process = new System.Diagnostics.Process
+            {
+                StartInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = executable,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                }
+            };
+
+            process.StartInfo.ArgumentList.Add("--flat-playlist");
+            process.StartInfo.ArgumentList.Add("--dump-single-json");
+            process.StartInfo.ArgumentList.Add("--skip-download");
+            process.StartInfo.ArgumentList.Add("--no-warnings");
+            process.StartInfo.ArgumentList.Add($"ytsearch10:{query}");
+
+            process.Start();
+            var outputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+            var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
+            await process.WaitForExitAsync(cancellationToken);
+
+            var output = await outputTask;
+            var error = await errorTask;
+
+            if (process.ExitCode != 0)
+            {
+                throw new InvalidOperationException(
+                    $"yt-dlp YouTube search failed with exit code {process.ExitCode}: {error.Trim()}");
+            }
+
+            using var document = JsonDocument.Parse(output);
+            var results = new List<YouTubeSearchResult>();
+
+            if (document.RootElement.TryGetProperty("entries", out var entries) &&
+                entries.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var entry in entries.EnumerateArray())
+                {
+                    if (!entry.TryGetProperty("id", out var idElement))
+                    {
+                        continue;
+                    }
+
+                    var id = idElement.GetString();
+                    if (string.IsNullOrWhiteSpace(id))
+                    {
+                        continue;
+                    }
+
+                    var title = entry.TryGetProperty("title", out var titleElement)
+                        ? titleElement.GetString() ?? string.Empty
+                        : string.Empty;
+                    var channel = entry.TryGetProperty("channel", out var channelElement)
+                        ? channelElement.GetString() ?? string.Empty
+                        : entry.TryGetProperty("uploader", out var uploaderElement)
+                            ? uploaderElement.GetString() ?? string.Empty
+                            : string.Empty;
+                    var duration = entry.TryGetProperty("duration", out var durationElement) &&
+                                   durationElement.ValueKind == JsonValueKind.Number
+                        ? durationElement.GetDouble()
+                        : 0;
+
+                    results.Add(new YouTubeSearchResult
+                    {
+                        VideoId = id,
+                        Title = title,
+                        Channel = channel,
+                        DurationSeconds = duration,
+                        Url = $"https://www.youtube.com/watch?v={id}",
+                        ThumbnailUrl = $"https://i.ytimg.com/vi/{id}/hqdefault.jpg",
+                        MatchScore = 0
+                    });
+                }
+            }
+
+            return results.Take(10).ToList();
+        }
+
+        private static bool TryExtractYouTubeVideoId(string input, out string videoId)
+        {
+            videoId = string.Empty;
+
+            if (System.Text.RegularExpressions.Regex.IsMatch(
+                    input,
+                    @"^[A-Za-z0-9_-]{11}$",
+                    System.Text.RegularExpressions.RegexOptions.CultureInvariant))
+            {
+                videoId = input;
+                return true;
+            }
+
+            if (!Uri.TryCreate(input, UriKind.Absolute, out var uri))
+            {
+                return false;
+            }
+
+            var host = uri.Host.Trim().ToLowerInvariant();
+            var isYouTubeHost = host == "youtube.com" ||
+                                host.EndsWith(".youtube.com", StringComparison.Ordinal) ||
+                                host == "youtu.be";
+
+            if (!isYouTubeHost)
+            {
+                return false;
+            }
+
+            if (host == "youtu.be")
+            {
+                videoId = uri.AbsolutePath.Trim('/').Split('/')[0];
+            }
+            else if (uri.AbsolutePath.Equals("/watch", StringComparison.OrdinalIgnoreCase))
+            {
+                var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+                videoId = query["v"] ?? string.Empty;
+            }
+            else
+            {
+                var parts = uri.AbsolutePath.Trim('/').Split('/');
+                if (parts.Length >= 2 &&
+                    (parts[0].Equals("shorts", StringComparison.OrdinalIgnoreCase) ||
+                     parts[0].Equals("embed", StringComparison.OrdinalIgnoreCase) ||
+                     parts[0].Equals("live", StringComparison.OrdinalIgnoreCase)))
+                {
+                    videoId = parts[1];
+                }
+            }
+
+            return System.Text.RegularExpressions.Regex.IsMatch(
+                videoId,
+                @"^[A-Za-z0-9_-]{11}$",
+                System.Text.RegularExpressions.RegexOptions.CultureInvariant);
         }
 
         private async Task<List<YouTubeSearchResult>> SearchYouTubeQueryAsync(
