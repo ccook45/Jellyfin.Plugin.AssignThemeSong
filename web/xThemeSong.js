@@ -288,6 +288,9 @@
         }
         .xthemesong-search-result-link {
             color: #00a4dc;
+            background: none;
+            border: 0;
+            cursor: pointer;
             font-size: 11px;
             text-decoration: none;
             white-space: nowrap;
@@ -565,6 +568,16 @@
         if (!duration) return 'Unknown duration';
 
         // System.Text.Json serializes TimeSpan as a string such as "00:03:42".
+        if (typeof duration === 'number') {
+            if (!isFinite(duration) || duration <= 0) return 'Unknown duration';
+            var totalSeconds = Math.round(duration);
+            var minutes = Math.floor(totalSeconds / 60);
+            var seconds = totalSeconds % 60;
+            var hours = Math.floor(minutes / 60);
+            minutes = minutes % 60;
+            return hours > 0 ? hours + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0') : minutes + ':' + String(seconds).padStart(2, '0');
+        }
+
         if (typeof duration === 'string') {
             var parts = duration.split(':').map(Number);
             if (parts.length === 3 && parts.every(function(part) { return !isNaN(part); })) {
@@ -604,7 +617,7 @@
         var apiUrl = ApiClient.getUrl('xThemeSong/' + itemId + '/search');
         fetch(apiUrl, {
             headers: {
-                'Authorization': 'MediaBrowser Client="xThemeSong", Device="Web", DeviceId="xThemeSong", Version="1.4.10", Token="' + ApiClient.accessToken() + '"'
+                'Authorization': 'MediaBrowser Client="xThemeSong", Device="Web", DeviceId="xThemeSong", Version="1.4.12", Token="' + ApiClient.accessToken() + '"'
             }
         }).then(function(response) {
             if (!response.ok) {
@@ -624,19 +637,26 @@
 
             resultsDiv.innerHTML = results.map(function(result, index) {
                 return '<div class="xthemesong-search-result">' +
-                    '<img class="xthemesong-search-result-thumb" src="' + escapeHtml(result.thumbnailUrl || ('https://i.ytimg.com/vi/' + encodeURIComponent(result.videoId) + '/hqdefault.jpg')) + '" alt="" loading="lazy">' +
+                    '<img class="xthemesong-search-result-thumb" src="' + escapeHtml(result.thumbnailUrl || (ApiClient.getUrl('xThemeSong/' + itemId + '/search/thumbnail?videoId=' + encodeURIComponent(result.videoId)))) + '" alt="" loading="lazy">' +
                     '<div class="xthemesong-search-result-info">' +
                     '<div class="xthemesong-search-result-title">' + escapeHtml(result.title) + '</div>' +
                     '<div class="xthemesong-search-result-meta">' +
                     escapeHtml(result.channel || 'Unknown channel') + ' • ' +
-                    formatSearchDuration(result.duration) +
+                    formatSearchDuration(result.durationSeconds) +
                     (index === 0 ? ' • Suggested match' : '') +
                     '</div>' +
-                    '<a class="xthemesong-search-result-link" href="' + escapeHtml(result.url) + '" target="_blank" rel="noopener noreferrer">▶ Verify on YouTube</a>' +
+                    '<button type="button" class="xthemesong-search-result-link" data-youtube-url="' + escapeHtml(result.url) + '">▶ Verify on YouTube</button>' +
                     '</div>' +
                     '<button type="button" class="xthemesong-btn xthemesong-btn-primary" data-video-id="' + escapeHtml(result.videoId) + '" data-video-title="' + escapeHtml(result.title) + '">Download</button>' +
                     '</div>';
             }).join('');
+
+            resultsDiv.querySelectorAll('.xthemesong-search-result-link[data-youtube-url]').forEach(function(button) {
+                button.addEventListener('click', function() {
+                    var url = this.getAttribute('data-youtube-url');
+                    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+                });
+            });
 
             resultsDiv.querySelectorAll('button[data-video-id]').forEach(function(button) {
                 button.addEventListener('click', function() {
