@@ -26,16 +26,16 @@ jobs:
           mkdir package
           cp -a bin/Release/net10.0/. package/
           cd package
-          zip -r ../xThemeSong_v1.4.0.zip .
+          zip -r ../xThemeSong_v1.4.1.zip .
 
       - name: Create release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if gh release view v1.4.0 >/dev/null 2>&1; then
-            gh release upload v1.4.0 xThemeSong_v1.4.0.zip --clobber
+          if gh release view v1.4.1 >/dev/null 2>&1; then
+            gh release upload v1.4.1 xThemeSong_v1.4.1.zip --clobber
           else
-            gh release create v1.4.0 xThemeSong_v1.4.0.zip --title "xThemeSong 1.4.0 - Jellyfin 12" --notes "Jellyfin 12 compatibility release. Built against Jellyfin 12.0.0 / .NET 10."
+            gh release create v1.4.1 xThemeSong_v1.4.1.zip --title "xThemeSong 1.4.1 - Jellyfin 12" --notes "Jellyfin 12 compatibility release. Built against Jellyfin 12.0.0 / .NET 10."
           fi
 
       - name: Update manifest
@@ -45,23 +45,23 @@ jobs:
           import hashlib, json
           from pathlib import Path
 
-          asset = Path("xThemeSong_v1.4.0.zip")
+          asset = Path("xThemeSong_v1.4.1.zip")
           checksum = hashlib.md5(asset.read_bytes()).hexdigest().upper()
           path = Path("manifest.json")
           data = json.loads(path.read_text(encoding="utf-8-sig"))
 
           entry = {
-              "version": "1.4.0.0",
+              "version": "1.4.1.0",
               "checksum": checksum,
-              "changelog": "v1.4.0: Jellyfin 12 compatibility; migrated to .NET 10 and Jellyfin 12.0 APIs.",
+              "changelog": "v1.4.1: Jellyfin 12 compatibility; migrated to .NET 10 and Jellyfin 12.0 APIs.",
               "targetAbi": "12.0.0.0",
-              "sourceUrl": "https://github.com/ccook45/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.4.0/xThemeSong_v1.4.0.zip"
+              "sourceUrl": "https://github.com/ccook45/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.4.1/xThemeSong_v1.4.1.zip"
           }
 
           for plugin in data:
               plugin["owner"] = "ccook45"
               versions = plugin.setdefault("versions", [])
-              versions[:] = [v for v in versions if v.get("version") != "1.4.0.0"]
+              versions[:] = [v for v in versions if v.get("version") != "1.4.1.0"]
               versions.insert(0, entry)
 
           path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
