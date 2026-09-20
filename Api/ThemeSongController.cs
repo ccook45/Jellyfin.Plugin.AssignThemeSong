@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Jellyfin.Data;
@@ -27,6 +28,7 @@ namespace Jellyfin.Plugin.xThemeSong.Api
         private readonly ILogger<ThemeSongController> _logger;
         private readonly ILibraryManager _libraryManager;
         private readonly ThemeDownloadService _themeDownloadService;
+        private static readonly HttpClient ThumbnailClient = new HttpClient();
         public ThemeSongController(
             ILogger<ThemeSongController> logger,
             ILibraryManager libraryManager,
@@ -277,6 +279,52 @@ namespace Jellyfin.Plugin.xThemeSong.Api
             {
                 _logger.LogError(ex, "Error searching YouTube themes for {ItemName}", item.Name);
                 return StatusCode(502, $"YouTube search failed: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Proxies a YouTube thumbnail through Jellyfin so the web client does not need
+        /// direct image access to i.ytimg.com.
+        /// </summary>
+        [HttpGet("{itemId}/search/thumbnail")]
+        public async Task<IActionResult> GetYouTubeThumbnail(
+            [FromRoute] string itemId,
+            [FromQuery] string videoId)
+        {
+            var item = _libraryManager.GetItemById(itemId);
+            if (item == null)
+            {
+                return NotFound();
+            }
+
+            if (!HasThemeManagementPermission(item))
+            {
+                return Forbid();
+            }
+
+            if (string.IsNullOrWhiteSpace(videoId) ||
+                videoId.Length > 20 ||
+                videoId.Any(c => !char.IsLetterOrDigit(c) && c != '-' && c != '_'))
+            {
+                return BadRequest("Invalid YouTube video ID");
+            }
+
+            try
+            {
+                var url = $"https://i.ytimg.com/vi/{videoId}/hqdefault.jpg";
+                using var response = await ThumbnailClient.GetAsync(url);
+                if (!response.IsSuccessStatusCode)
+                {
+                    return NotFound();
+                }
+
+                var bytes = await response.Content.ReadAsByteArrayAsync();
+                return File(bytes, "image/jpeg");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not proxy YouTube thumbnail for {VideoId}", videoId);
+                return NotFound();
             }
         }
 
