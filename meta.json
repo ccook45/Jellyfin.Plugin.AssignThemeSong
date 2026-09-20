@@ -1,12 +1,12 @@
 {
   "name": "xThemeSong",
   "guid": "97db7543-d64d-45e1-b2e7-62729b56371f",
-  "version": "1.4.5.0",
+  "version": "1.4.6.0",
   "targetAbi": "12.0.0.0",
   "overview": "Download theme songs from YouTube or upload custom MP3s for your media library",
   "description": "A plugin that automatically downloads theme songs from YouTube by user provided video ID/URL or allows uploading custom MP3 files. Features complete Web UI with drag-and-drop upload, audio player, export/import, role-based permissions, per-user preferences, and media library overview.",
   "owner": "ccook45",
   "category": "General",
   "imageUrl": "icon.png",
-  "changelog": "v1.4.5: Jellyfin 12 authorization compatibility; use the authenticated administrator role claim instead of IUserManager runtime binding."
+  "changelog": "v1.4.6: Update YoutubeExplode to 6.6.2 for current YouTube compatibility."
 }
