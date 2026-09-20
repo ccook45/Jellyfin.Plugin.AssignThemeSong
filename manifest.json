@@ -9,6 +9,13 @@
     "imageUrl": "https://raw.githubusercontent.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/main/images/icon.png",
     "versions": [
       {
+        "version": "1.4.6.0",
+        "checksum": "6AC737E8D2E5B7A239BFD27695ED78D2",
+        "changelog": "v1.4.6: Jellyfin 12 compatibility; migrated to .NET 10 and Jellyfin 12.0 APIs.",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/ccook45/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.4.6/xThemeSong_v1.4.6.zip"
+      },
+      {
         "version": "1.4.5.0",
         "checksum": "DD7CD13BEDEF6D1F085EF6A652CB31A5",
         "changelog": "v1.4.5: Jellyfin 12 compatibility; migrated to .NET 10 and Jellyfin 12.0 APIs.",
