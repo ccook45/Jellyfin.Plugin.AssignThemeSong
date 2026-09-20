@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using System.Linq;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -80,6 +82,156 @@ namespace Jellyfin.Plugin.xThemeSong.Services
             var ffmpegName = OperatingSystem.IsWindows() ? "ffmpeg.exe" : "ffmpeg";
             _logger.LogInformation("Using FFmpeg from system PATH: {Name}", ffmpegName);
             return ffmpegName;
+        }
+
+        /// <summary>
+        /// Searches YouTube for likely theme songs for a media item.
+        /// The query follows the same approach as the reference theme downloader:
+        /// title + media type + "theme song", while scoring short and title-matching results higher.
+        /// </summary>
+        public async Task<List<YouTubeSearchResult>> SearchYouTubeThemes(
+            string title,
+            string mediaType,
+            int? productionYear = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(title))
+            {
+                return new List<YouTubeSearchResult>();
+            }
+
+            var typeLabel = string.Equals(mediaType, "Movie", StringComparison.OrdinalIgnoreCase)
+                ? "movie"
+                : "tv show";
+
+            var cleanTitle = title.Trim();
+            var query = $"{cleanTitle} {typeLabel} theme song";
+            if (productionYear.HasValue && productionYear.Value > 0)
+            {
+                query = $"{cleanTitle} {productionYear.Value} {typeLabel} theme song";
+            }
+
+            _logger.LogInformation("Searching YouTube for theme song: {Query}", query);
+
+            var results = new List<YouTubeSearchResult>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            try
+            {
+                await foreach (var video in _youtube.Search.GetVideosAsync(query, cancellationToken))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    var videoId = video.Id.Value;
+                    if (string.IsNullOrWhiteSpace(videoId) || !seen.Add(videoId))
+                    {
+                        continue;
+                    }
+
+                    var score = ScoreThemeResult(cleanTitle, typeLabel, video.Title, video.Duration);
+                    results.Add(new YouTubeSearchResult
+                    {
+                        VideoId = videoId,
+                        Title = video.Title,
+                        Channel = video.Author?.ChannelTitle ?? string.Empty,
+                        Duration = video.Duration,
+                        Url = $"https://www.youtube.com/watch?v={videoId}",
+                        MatchScore = score
+                    });
+
+                    // We only need a small candidate set for the UI.
+                    if (results.Count >= 12)
+                    {
+                        break;
+                    }
+                }
+
+                return results
+                    .OrderByDescending(r => r.MatchScore)
+                    .ThenBy(r => r.Duration ?? TimeSpan.MaxValue)
+                    .Take(6)
+                    .ToList();
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "YouTube theme search failed for {Title}", title);
+                throw;
+            }
+        }
+
+        private static int ScoreThemeResult(
+            string title,
+            string typeLabel,
+            string resultTitle,
+            TimeSpan? duration)
+        {
+            var normalizedTitle = NormalizeSearchText(title);
+            var normalizedResult = NormalizeSearchText(resultTitle);
+            var score = 0;
+
+            if (!string.IsNullOrWhiteSpace(normalizedTitle) &&
+                normalizedResult.Contains(normalizedTitle, StringComparison.Ordinal))
+            {
+                score += 100;
+            }
+
+            foreach (var token in normalizedTitle.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (token.Length >= 3 && normalizedResult.Contains(token, StringComparison.Ordinal))
+                {
+                    score += 8;
+                }
+            }
+
+            if (normalizedResult.Contains("theme", StringComparison.Ordinal))
+            {
+                score += 25;
+            }
+
+            if (normalizedResult.Contains("soundtrack", StringComparison.Ordinal) ||
+                normalizedResult.Contains("ost", StringComparison.Ordinal))
+            {
+                score += 15;
+            }
+
+            if (normalizedResult.Contains(typeLabel, StringComparison.Ordinal))
+            {
+                score += 5;
+            }
+
+            if (duration.HasValue)
+            {
+                if (duration.Value <= TimeSpan.FromMinutes(5))
+                {
+                    score += 20;
+                }
+                else if (duration.Value <= TimeSpan.FromMinutes(10))
+                {
+                    score += 10;
+                }
+                else
+                {
+                    score -= 30;
+                }
+            }
+
+            return score;
+        }
+
+        private static string NormalizeSearchText(string value)
+        {
+            var chars = value
+                .ToLowerInvariant()
+                .Select(c => char.IsLetterOrDigit(c) || char.IsWhiteSpace(c) ? c : ' ')
+                .ToArray();
+
+            return string.Join(
+                ' ',
+                new string(chars).Split(' ', StringSplitOptions.RemoveEmptyEntries));
         }
 
         /// <summary>
