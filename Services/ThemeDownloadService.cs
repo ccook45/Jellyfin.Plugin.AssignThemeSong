@@ -136,6 +136,7 @@ namespace Jellyfin.Plugin.xThemeSong.Services
                         Channel = video.Author?.ChannelTitle ?? string.Empty,
                         Duration = video.Duration,
                         Url = $"https://www.youtube.com/watch?v={videoId}",
+                        ThumbnailUrl = $"https://i.ytimg.com/vi/{videoId}/hqdefault.jpg",
                         MatchScore = score
                     });
 
@@ -163,10 +164,12 @@ namespace Jellyfin.Plugin.xThemeSong.Services
                         result.Channel = video.Author?.ChannelTitle ?? result.Channel;
                         result.Duration = video.Duration ?? result.Duration;
                         result.Url = video.Url;
+                        result.ThumbnailUrl = $"https://i.ytimg.com/vi/{result.VideoId}/hqdefault.jpg";
+                        _logger.LogInformation("Hydrated YouTube result {VideoId}: Title={Title}, Channel={Channel}, Duration={Duration}", result.VideoId, result.Title, result.Channel, result.Duration);
                     }
                     catch (Exception ex) when (ex is not OperationCanceledException)
                     {
-                        _logger.LogDebug(ex, "Could not hydrate YouTube search result {VideoId}", result.VideoId);
+                        _logger.LogWarning(ex, "Could not hydrate YouTube search result {VideoId}; returning search metadata and direct verification link", result.VideoId);
                     }
                 }
 
