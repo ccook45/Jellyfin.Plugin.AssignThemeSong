@@ -58,7 +58,13 @@ namespace Jellyfin.Plugin.xThemeSong.Api
             var config = GetConfiguration();
             
             // Check if user is an administrator using role claim
-            var isAdmin = User.IsInRole("Administrator");
+            var isAdmin = false;
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var currentUserId))
+            {
+                var currentUser = _userManager.GetUserById(currentUserId);
+                isAdmin = currentUser?.Policy?.IsAdministrator ?? false;
+            }
             
             // Check permission mode
             switch (config.PermissionMode)
