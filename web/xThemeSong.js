@@ -617,7 +617,8 @@
         var apiUrl = ApiClient.getUrl('xThemeSong/' + itemId + '/search');
         fetch(apiUrl, {
             headers: {
-                'Authorization': 'MediaBrowser Client="xThemeSong", Device="Web", DeviceId="xThemeSong", Version="1.4.13", Token="' + ApiClient.accessToken() + '"'
+                'Authorization': 'MediaBrowser Client="xThemeSong", Device="Web", DeviceId="xThemeSong", Version="1.4.14", Token="' + ApiClient.accessToken() + '"',
+                'Accept': 'application/json; profile=CamelCase'
             }
         }).then(function(response) {
             if (!response.ok) {
@@ -656,7 +657,7 @@
                 var thumbnailUrl = ApiClient.getUrl(
                     'xThemeSong/' + itemId + '/search/thumbnail?videoId=' +
                     encodeURIComponent(result.videoId) +
-                    '&api_key=' + encodeURIComponent(ApiClient.accessToken()));
+                    '&ApiKey=' + encodeURIComponent(ApiClient.accessToken()));
                 return '<div class="xthemesong-search-result">' +
                     '<img class="xthemesong-search-result-thumb" src="' + escapeHtml(thumbnailUrl) + '" alt="" loading="lazy">' +
                     '<div class="xthemesong-search-result-info">' +
@@ -699,7 +700,7 @@
         fetch(apiUrl, {
             method: 'POST',
             headers: {
-                'Authorization': 'MediaBrowser Client="xThemeSong", Device="Web", DeviceId="xThemeSong", Version="1.4.10", Token="' + ApiClient.accessToken() + '"',
+                'Authorization': 'MediaBrowser Client="xThemeSong", Device="Web", DeviceId="xThemeSong", Version="1.4.14", Token="' + ApiClient.accessToken() + '"',
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ videoId: videoId, targetType: targetType })
