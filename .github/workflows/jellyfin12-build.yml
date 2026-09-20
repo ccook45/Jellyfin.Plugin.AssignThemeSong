@@ -26,16 +26,16 @@ jobs:
           mkdir package
           cp -a bin/Release/net10.0/. package/
           cd package
-          zip -r ../xThemeSong_v1.4.21.zip .
+          zip -r ../xThemeSong_v1.4.22.zip .
 
       - name: Create release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if gh release view v1.4.21 >/dev/null 2>&1; then
-            gh release upload v1.4.21 xThemeSong_v1.4.21.zip --clobber
+          if gh release view v1.4.22 >/dev/null 2>&1; then
+            gh release upload v1.4.22 xThemeSong_v1.4.22.zip --clobber
           else
-            gh release create v1.4.21 xThemeSong_v1.4.21.zip --title "xThemeSong 1.4.21 - Jellyfin 12" --notes "Fix managed yt-dlp executable validation before YouTube fallback."
+            gh release create v1.4.22 xThemeSong_v1.4.22.zip --title "xThemeSong 1.4.21 - Jellyfin 12" --notes "Filter unavailable YouTube search results before selection and improve search-result validation while retaining the YoutubeExplode-first and yt-dlp fallback download flow."
           fi
 
       - name: Update manifest
@@ -45,23 +45,23 @@ jobs:
           import hashlib, json
           from pathlib import Path
 
-          asset = Path("xThemeSong_v1.4.21.zip")
+          asset = Path("xThemeSong_v1.4.22.zip")
           checksum = hashlib.md5(asset.read_bytes()).hexdigest().upper()
           path = Path("manifest.json")
           data = json.loads(path.read_text(encoding="utf-8-sig"))
 
           entry = {
-              "version": "1.4.21.0",
+              "version": "1.4.22.0",
               "checksum": checksum,
-              "changelog": "v1.4.21: Add YouTube URL and manual search overrides to the assignment search UI, with YoutubeExplode-first search and yt-dlp fallback.",
+              "changelog": "v1.4.22: Filter unavailable YouTube search results before selection and improve search-result validation while retaining YoutubeExplode-first search and yt-dlp fallback.",
               "targetAbi": "12.0.0.0",
-              "sourceUrl": "https://github.com/ccook45/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.4.21/xThemeSong_v1.4.21.zip"
+              "sourceUrl": "https://github.com/ccook45/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.4.22/xThemeSong_v1.4.22.zip"
           }
 
           for plugin in data:
               plugin["owner"] = "ccook45"
               versions = plugin.setdefault("versions", [])
-              versions[:] = [v for v in versions if v.get("version") != "1.4.21.0"]
+              versions[:] = [v for v in versions if v.get("version") != "1.4.22.0"]
               versions.insert(0, entry)
 
           path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

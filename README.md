@@ -81,13 +81,15 @@ A Jellyfin 12 plugin that allows you to download theme songs from YouTube or upl
 3. Select **"Assign Theme Song"**.
 4. A modal dialog will open showing:
    - 🎧 Existing theme song audio player, if available
-   - YouTube URL/Video ID input field
+   - Combined YouTube URL/search input field
    - Drag-and-drop area for MP3 files
 5. Choose one of the following:
-   - Click **"🔎 Auto Search"** to search YouTube using the media title and type, then choose a result to download
-   - Enter a YouTube video ID or URL
+   - Leave the YouTube field blank and click **"🔎 Search YouTube"** to search automatically using the media title and type
+   - Enter a YouTube video ID or URL to resolve that exact video as a single selectable result
+   - Enter ordinary search terms to search YouTube and choose a result to download
    - Upload an MP3 file (drag-and-drop or browse)
-6. Click **"Save Theme Song"** when entering a URL manually.
+6. When searching YouTube, select a result and click **Download**. The selected result is downloaded through the normal YoutubeExplode-first/yt-dlp-fallback path.
+7. When uploading an MP3 file, use the normal upload/save controls.
 7. Wait for the loading animation to complete.
 8. A success message will appear when done.
 
@@ -257,7 +259,7 @@ The project currently uses **YoutubeExplode 6.6.2** for YouTube access.
 
 ## 📝 Development Status
 
-**Current Version**: **v1.4.20**
+**Current Version**: **v1.4.22**
 
 ### Jellyfin 12 / Fork Maintenance
 
@@ -269,6 +271,18 @@ The project currently uses **YoutubeExplode 6.6.2** for YouTube access.
 - Corrected plugin assembly/file version reporting
 - Ensures the plugin logo is included in release packages
 - Uses **YoutubeExplode 6.6.2** for current YouTube compatibility
+
+### v1.4.22
+- ✅ **Unavailable-result filtering** - YouTube search results are validated before they are presented for selection, so deleted/private/unavailable videos are filtered out when YoutubeExplode can identify them as unavailable
+- ✅ **Safer search validation** - Automatic theme search validates the highest-ranked candidates while keeping transient/API validation failures from incorrectly hiding usable results
+- ✅ **Consistent override validation** - Manual YouTube URL searches and text searches use the same unavailable-result filtering before download selection
+- ✅ **Clearer YouTube fallback behavior** - The existing YoutubeExplode-first download flow and managed yt-dlp fallback remain unchanged
+
+### v1.4.21
+- ✅ **YouTube URL/search override input** - The assignment dialog accepts a YouTube URL/video ID or ordinary search terms in the same field
+- ✅ **Exact video selection** - A YouTube URL resolves to one selectable result instead of directly downloading
+- ✅ **Manual YouTube search** - Search text returns selectable YouTube candidates before download
+- ✅ **YoutubeExplode-first search with yt-dlp fallback** - Existing fallback behavior is preserved for search failures
 
 ### v1.4.20
 - ✅ **Managed yt-dlp fallback** - xThemeSong automatically downloads the appropriate official yt-dlp standalone binary when the normal YoutubeExplode path has no audio-only streams

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using YoutubeExplode;
 using YoutubeExplode.Videos.Streams;
+using YoutubeExplode.Exceptions;
 using Jellyfin.Plugin.xThemeSong.Models;
 using System.Text.Json;
 
@@ -185,11 +186,17 @@ namespace Jellyfin.Plugin.xThemeSong.Services
                     }
                 }
 
-                return results
+                var rankedCandidates = results
                     .OrderByDescending(r => r.MatchScore)
                     .ThenBy(r => r.DurationSeconds <= 0 ? double.MaxValue : r.DurationSeconds)
-                    .Take(10)
+                    .Take(15)
                     .ToList();
+
+                var availableResults = await FilterUnavailableYouTubeResultsAsync(
+                    rankedCandidates,
+                    cancellationToken);
+
+                return availableResults.Take(10).ToList();
             }
             catch (OperationCanceledException)
             {
@@ -273,7 +280,7 @@ namespace Jellyfin.Plugin.xThemeSong.Services
 
                 if (results.Count > 0)
                 {
-                    return results;
+                    return await FilterUnavailableYouTubeResultsAsync(results, cancellationToken);
                 }
 
                 _logger.LogWarning("YoutubeExplode returned no results for manual YouTube search: {Query}", input);
@@ -287,7 +294,8 @@ namespace Jellyfin.Plugin.xThemeSong.Services
                 _logger.LogWarning(ex, "YoutubeExplode manual YouTube search failed: {Query}; trying yt-dlp.", input);
             }
 
-            return await SearchYouTubeWithYtDlpAsync(input, cancellationToken);
+            var fallbackResults = await SearchYouTubeWithYtDlpAsync(input, cancellationToken);
+            return await FilterUnavailableYouTubeResultsAsync(fallbackResults, cancellationToken);
         }
 
         private async Task<List<YouTubeSearchResult>> SearchYouTubeWithYtDlpAsync(
@@ -373,6 +381,58 @@ namespace Jellyfin.Plugin.xThemeSong.Services
             }
 
             return results.Take(10).ToList();
+        }
+
+        private async Task<List<YouTubeSearchResult>> FilterUnavailableYouTubeResultsAsync(
+            List<YouTubeSearchResult> results,
+            CancellationToken cancellationToken)
+        {
+            if (results.Count == 0)
+            {
+                return results;
+            }
+
+            using var throttle = new SemaphoreSlim(5, 5);
+            var checks = results.Select(async result =>
+            {
+                await throttle.WaitAsync(cancellationToken);
+                try
+                {
+                    await _youtube.Videos.GetAsync(result.VideoId, cancellationToken);
+                    return result;
+                }
+                catch (VideoUnavailableException)
+                {
+                    _logger.LogWarning(
+                        "Filtering unavailable YouTube search result {VideoId}: {Title}",
+                        result.VideoId,
+                        result.Title);
+                    return null;
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    // A transient/API access failure should not hide an otherwise valid search result.
+                    _logger.LogDebug(
+                        ex,
+                        "Could not validate YouTube search result {VideoId}; retaining it",
+                        result.VideoId);
+                    return result;
+                }
+                finally
+                {
+                    throttle.Release();
+                }
+            });
+
+            var checkedResults = await Task.WhenAll(checks);
+            return checkedResults
+                .Where(result => result is not null)
+                .Cast<YouTubeSearchResult>()
+                .ToList();
         }
 
         private static bool TryExtractYouTubeVideoId(string input, out string videoId)
