@@ -100,49 +100,70 @@ namespace Jellyfin.Plugin.xThemeSong.Services
                 return new List<YouTubeSearchResult>();
             }
 
-            var typeLabel = string.Equals(mediaType, "Movie", StringComparison.OrdinalIgnoreCase)
-                ? "movie"
-                : "tv show";
-
+            var isMovie = string.Equals(mediaType, "Movie", StringComparison.OrdinalIgnoreCase);
             var cleanTitle = title.Trim();
-            var query = $"{cleanTitle} {typeLabel} theme song";
-            if (productionYear.HasValue && productionYear.Value > 0)
-            {
-                query = $"{cleanTitle} {productionYear.Value} {typeLabel} theme song";
-            }
 
-            _logger.LogInformation("Searching YouTube for theme song: {Query}", query);
+            // Use several explicit music/theme-oriented queries. YouTube's ranking can otherwise
+            // surface trailers, recaps, and other videos even when "theme song" is in the query.
+            var queries = isMovie
+                ? new[]
+                {
+                    $"\"{cleanTitle}\" theme song",
+                    $"\"{cleanTitle}\" main theme",
+                    $"\"{cleanTitle}\" soundtrack theme"
+                }
+                : new[]
+                {
+                    $"\"{cleanTitle}\" theme song",
+                    $"\"{cleanTitle}\" opening theme",
+                    $"\"{cleanTitle}\" ending theme"
+                };
+
+            _logger.LogInformation(
+                "Searching YouTube for theme songs for {Title} using {QueryCount} targeted queries",
+                cleanTitle,
+                queries.Length);
 
             var results = new List<YouTubeSearchResult>();
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             try
             {
-                await foreach (var video in _youtube.Search.GetVideosAsync(query, cancellationToken))
+                foreach (var query in queries)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
+                    _logger.LogInformation("YouTube theme search query: {Query}", query);
 
-                    var videoId = video.Id.Value;
-                    if (string.IsNullOrWhiteSpace(videoId) || !seen.Add(videoId))
+                    await foreach (var video in _youtube.Search.GetVideosAsync(query, cancellationToken))
                     {
-                        continue;
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        var videoId = video.Id.Value;
+                        if (string.IsNullOrWhiteSpace(videoId) || !seen.Add(videoId))
+                        {
+                            continue;
+                        }
+
+                        var score = ScoreThemeResult(cleanTitle, video.Title, video.Duration);
+                        results.Add(new YouTubeSearchResult
+                        {
+                            VideoId = videoId,
+                            Title = video.Title,
+                            Channel = video.Author?.ChannelTitle ?? string.Empty,
+                            DurationSeconds = video.Duration?.TotalSeconds ?? 0,
+                            Url = $"https://www.youtube.com/watch?v={videoId}",
+                            ThumbnailUrl = $"https://i.ytimg.com/vi/{videoId}/hqdefault.jpg",
+                            MatchScore = score
+                        });
+
+                        // Keep a reasonable candidate pool across all targeted searches.
+                        if (results.Count >= 30)
+                        {
+                            break;
+                        }
                     }
 
-                    var score = ScoreThemeResult(cleanTitle, typeLabel, video.Title, video.Duration);
-                    _logger.LogInformation("YouTube search result {VideoId}: Title={Title}, Channel={Channel}, DurationSeconds={DurationSeconds}", videoId, video.Title, video.Author?.ChannelTitle ?? string.Empty, video.Duration?.TotalSeconds ?? 0);
-                    results.Add(new YouTubeSearchResult
-                    {
-                        VideoId = videoId,
-                        Title = video.Title,
-                        Channel = video.Author?.ChannelTitle ?? string.Empty,
-                        DurationSeconds = video.Duration?.TotalSeconds ?? 0,
-                        Url = $"https://www.youtube.com/watch?v={videoId}",
-                        ThumbnailUrl = $"https://i.ytimg.com/vi/{videoId}/hqdefault.jpg",
-                        MatchScore = score
-                    });
-
-                    // We only need a small candidate set for the UI.
-                    if (results.Count >= 12)
+                    if (results.Count >= 30)
                     {
                         break;
                     }
@@ -154,8 +175,7 @@ namespace Jellyfin.Plugin.xThemeSong.Services
                     .Take(6)
                     .ToList();
 
-                // Search results can omit channel and duration metadata depending on YouTube's
-                // response. Hydrate the small set we actually show in the UI from the video endpoint.
+                // Hydrate only the candidates shown in the UI.
                 foreach (var result in topResults)
                 {
                     try
@@ -166,11 +186,20 @@ namespace Jellyfin.Plugin.xThemeSong.Services
                         result.DurationSeconds = video.Duration?.TotalSeconds ?? result.DurationSeconds;
                         result.Url = video.Url;
                         result.ThumbnailUrl = $"https://i.ytimg.com/vi/{result.VideoId}/hqdefault.jpg";
-                        _logger.LogInformation("Hydrated YouTube result {VideoId}: Title={Title}, Channel={Channel}, DurationSeconds={DurationSeconds}", result.VideoId, result.Title, result.Channel, result.DurationSeconds);
+                        _logger.LogInformation(
+                            "Hydrated YouTube result {VideoId}: Title={Title}, Channel={Channel}, DurationSeconds={DurationSeconds}, MatchScore={MatchScore}",
+                            result.VideoId,
+                            result.Title,
+                            result.Channel,
+                            result.DurationSeconds,
+                            result.MatchScore);
                     }
                     catch (Exception ex) when (ex is not OperationCanceledException)
                     {
-                        _logger.LogWarning(ex, "Could not hydrate YouTube search result {VideoId}; returning search metadata and direct verification link", result.VideoId);
+                        _logger.LogWarning(
+                            ex,
+                            "Could not hydrate YouTube search result {VideoId}; returning search metadata and direct verification link",
+                            result.VideoId);
                     }
                 }
 
@@ -189,7 +218,6 @@ namespace Jellyfin.Plugin.xThemeSong.Services
 
         private static int ScoreThemeResult(
             string title,
-            string typeLabel,
             string resultTitle,
             TimeSpan? duration)
         {
@@ -211,9 +239,26 @@ namespace Jellyfin.Plugin.xThemeSong.Services
                 }
             }
 
-            if (normalizedResult.Contains("theme", StringComparison.Ordinal))
+            if (normalizedResult.Contains("theme song", StringComparison.Ordinal))
             {
-                score += 25;
+                score += 50;
+            }
+            else if (normalizedResult.Contains("theme", StringComparison.Ordinal))
+            {
+                score += 35;
+            }
+
+            if (normalizedResult.Contains("opening theme", StringComparison.Ordinal) ||
+                normalizedResult.Contains("opening song", StringComparison.Ordinal) ||
+                normalizedResult.Contains("ending theme", StringComparison.Ordinal) ||
+                normalizedResult.Contains("ending song", StringComparison.Ordinal))
+            {
+                score += 40;
+            }
+
+            if (normalizedResult.Contains("main theme", StringComparison.Ordinal))
+            {
+                score += 35;
             }
 
             if (normalizedResult.Contains("soundtrack", StringComparison.Ordinal) ||
@@ -222,24 +267,51 @@ namespace Jellyfin.Plugin.xThemeSong.Services
                 score += 15;
             }
 
-            if (normalizedResult.Contains(typeLabel, StringComparison.Ordinal))
+            if (normalizedResult.Contains("song", StringComparison.Ordinal) ||
+                normalizedResult.Contains("music", StringComparison.Ordinal))
             {
-                score += 5;
+                score += 10;
+            }
+
+            // Strongly demote common non-theme search results.
+            if (normalizedResult.Contains("trailer", StringComparison.Ordinal))
+            {
+                score -= 70;
+            }
+
+            if (normalizedResult.Contains("recap", StringComparison.Ordinal) ||
+                normalizedResult.Contains("review", StringComparison.Ordinal) ||
+                normalizedResult.Contains("explained", StringComparison.Ordinal))
+            {
+                score -= 60;
+            }
+
+            if (normalizedResult.Contains("full episode", StringComparison.Ordinal) ||
+                normalizedResult.Contains("episode", StringComparison.Ordinal))
+            {
+                score -= 55;
+            }
+
+            if (normalizedResult.Contains("top 10", StringComparison.Ordinal) ||
+                normalizedResult.Contains("top 20", StringComparison.Ordinal) ||
+                normalizedResult.Contains("characters", StringComparison.Ordinal))
+            {
+                score -= 45;
             }
 
             if (duration.HasValue)
             {
                 if (duration.Value <= TimeSpan.FromMinutes(5))
                 {
-                    score += 20;
+                    score += 30;
                 }
                 else if (duration.Value <= TimeSpan.FromMinutes(10))
                 {
-                    score += 10;
+                    score += 15;
                 }
                 else
                 {
-                    score -= 30;
+                    score -= 25;
                 }
             }
 
