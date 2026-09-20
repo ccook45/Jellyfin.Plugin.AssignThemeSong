@@ -467,9 +467,9 @@
                             var poster=item.imageUrl?'<img loading="lazy" src="'+item.imageUrl+'" alt="" style="width:50px;height:auto;border-radius:4px;" />':'<div style="width:50px;height:75px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#666;font-size:10px;">No Image</div>';
                             html+='<tr data-item-id="'+escapeHtml(item.itemId)+'"><td>'+poster+'</td><td>'+escapeHtml(item.title)+'<span class="'+typeClass+'">'+item.type+'</span></td><td>'+status+'</td>';
                             html+='<td><input type="text" class="xthemesong-url-field" data-item-id="'+escapeHtml(item.itemId)+'" value="'+escapeHtml(item.youtubeUrl||'')+'" placeholder="https://youtube.com/watch?v=..." /></td>';
-                            html+='<td style="text-align:right;"><button type="button" class="xthemesong-btn" onclick="window.xThemeSongOpenAssign(\\''+item.itemId+'\\')">Assign</button></td></tr>';
+                            html+='<td style="text-align:right;"><button type="button" class="xthemesong-btn" onclick="window.xThemeSongOpenAssign(\''+item.itemId+'\')">Assign</button></td></tr>';
                         });
-                        html+='</tbody></table><div class="xthemesong-save-row"><button type="button" class="xthemesong-btn" onclick="window.xThemeSongSaveUrls(\\''+library.libraryId+'\\')">Save URLs</button></div></div>';
+                        html+='</tbody></table><div class="xthemesong-save-row"><button type="button" class="xthemesong-btn" onclick="window.xThemeSongSaveUrls(\''+library.libraryId+'\')">Save URLs</button></div></div>';
                     });
                     contentDiv.innerHTML=pageItems.length?html:'<div style="text-align:center;padding:40px;color:#888;">No media matches the current filters.</div>';
                     document.getElementById('libraryFilterBar').style.display='block';
