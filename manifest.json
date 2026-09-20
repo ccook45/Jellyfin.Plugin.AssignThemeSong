@@ -9,6 +9,13 @@
     "imageUrl": "https://raw.githubusercontent.com/ccook45/Jellyfin.Plugin.AssignThemeSong/main/images/icon.png",
     "versions": [
       {
+        "version": "1.4.18.0",
+        "checksum": "F80D6DE067431DDDDEA5DBD838BFAE16",
+        "changelog": "v1.4.18: Fall back to yt-dlp when YouTube provides no audio-only streams.",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/ccook45/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.4.18/xThemeSong_v1.4.18.zip"
+      },
+      {
         "version": "1.4.17.0",
         "checksum": "864A3CDF85300ABCAA65A776A8F55CBE",
         "changelog": "v1.4.17: Speed up YouTube theme search with bounded concurrent queries.",
