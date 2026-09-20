@@ -53,7 +53,7 @@ jobs:
           entry = {
               "version": "1.4.15.0",
               "checksum": checksum,
-              "changelog": "v1.4.15: Fix Jellyfin 12 thumbnail authentication and improve theme-focused YouTube search.",
+              "changelog": "v1.4.15: Expand opening theme search coverage and return more candidate videos.",
               "targetAbi": "12.0.0.0",
               "sourceUrl": "https://github.com/ccook45/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.4.15/xThemeSong_v1.4.15.zip"
           }
