@@ -26,16 +26,16 @@ jobs:
           mkdir package
           cp -a bin/Release/net10.0/. package/
           cd package
-          zip -r ../xThemeSong_v1.4.17.zip .
+          zip -r ../xThemeSong_v1.4.18.zip .
 
       - name: Create release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if gh release view v1.4.17 >/dev/null 2>&1; then
-            gh release upload v1.4.17 xThemeSong_v1.4.17.zip --clobber
+          if gh release view v1.4.18 >/dev/null 2>&1; then
+            gh release upload v1.4.18 xThemeSong_v1.4.18.zip --clobber
           else
-            gh release create v1.4.17 xThemeSong_v1.4.17.zip --title "xThemeSong 1.4.17 - Jellyfin 12" --notes "Refresh Media Management immediately after assigning a theme song."
+            gh release create v1.4.18 xThemeSong_v1.4.18.zip --title "xThemeSong 1.4.17 - Jellyfin 12" --notes "Fall back to yt-dlp when YouTube provides no audio-only streams."
           fi
 
       - name: Update manifest
@@ -45,23 +45,23 @@ jobs:
           import hashlib, json
           from pathlib import Path
 
-          asset = Path("xThemeSong_v1.4.17.zip")
+          asset = Path("xThemeSong_v1.4.18.zip")
           checksum = hashlib.md5(asset.read_bytes()).hexdigest().upper()
           path = Path("manifest.json")
           data = json.loads(path.read_text(encoding="utf-8-sig"))
 
           entry = {
-              "version": "1.4.17.0",
+              "version": "1.4.18.0",
               "checksum": checksum,
-              "changelog": "v1.4.17: Speed up YouTube theme search with bounded concurrent queries.",
+              "changelog": "v1.4.18: Speed up YouTube theme search with bounded concurrent queries.",
               "targetAbi": "12.0.0.0",
-              "sourceUrl": "https://github.com/ccook45/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.4.17/xThemeSong_v1.4.17.zip"
+              "sourceUrl": "https://github.com/ccook45/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.4.18/xThemeSong_v1.4.18.zip"
           }
 
           for plugin in data:
               plugin["owner"] = "ccook45"
               versions = plugin.setdefault("versions", [])
-              versions[:] = [v for v in versions if v.get("version") != "1.4.17.0"]
+              versions[:] = [v for v in versions if v.get("version") != "1.4.18.0"]
               versions.insert(0, entry)
 
           path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
