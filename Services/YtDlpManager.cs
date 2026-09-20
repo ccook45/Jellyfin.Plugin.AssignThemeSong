@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Security.Cryptography;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using MediaBrowser.Common.Configuration;
@@ -155,6 +154,9 @@ public sealed class YtDlpManager
                 }
             };
 
+            // yt-dlp requires a URL unless --version/another informational option is supplied.
+            // Use the actual version command so a successful exit proves the binary can execute.
+            process.StartInfo.ArgumentList.Add("--version");
             process.Start();
             var outputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
             var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
@@ -299,7 +301,7 @@ public sealed class YtDlpManager
     private static HttpClient CreateHttpClient()
     {
         var client = new HttpClient();
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("xThemeSong/1.4.19");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("xThemeSong/1.4.20");
         return client;
     }
 }
