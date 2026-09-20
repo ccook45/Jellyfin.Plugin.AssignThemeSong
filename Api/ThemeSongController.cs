@@ -304,7 +304,7 @@ namespace Jellyfin.Plugin.xThemeSong.Api
         /// Deletes the theme song and metadata for a media item.
         /// </summary>
         [HttpDelete("{itemId}")]
-        public ActionResult DeleteThemeSong([FromRoute] string itemId)
+        public async Task<ActionResult> DeleteThemeSong([FromRoute] string itemId)
         {
             var item = _libraryManager.GetItemById(itemId);
             if (item == null)
@@ -313,7 +313,7 @@ namespace Jellyfin.Plugin.xThemeSong.Api
             }
 
             // Check permissions
-            if (!HasThemeManagementPermission(item))
+            if (!await HasThemeManagementPermission(item))
             {
                 return Forbid();
             }
@@ -533,7 +533,7 @@ namespace Jellyfin.Plugin.xThemeSong.Api
         /// Saves a YouTube URL for a media item (creates/updates theme.json without downloading).
         /// </summary>
         [HttpPost("{itemId}/url")]
-        public ActionResult SaveYouTubeUrl([FromRoute] string itemId, [FromBody] SaveYouTubeUrlRequest request)
+        public async Task<ActionResult> SaveYouTubeUrl([FromRoute] string itemId, [FromBody] SaveYouTubeUrlRequest request)
         {
             var item = _libraryManager.GetItemById(itemId);
             if (item == null)
