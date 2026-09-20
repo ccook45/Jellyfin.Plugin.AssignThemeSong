@@ -10,7 +10,7 @@
     "versions": [
       {
         "version": "1.4.20.0",
-        "checksum": "3E18840A054074CF99C9E86A73A53218",
+        "checksum": "8569728453408B4AB33EDC94E34BA21D",
         "changelog": "v1.4.20: Automatically download and manage the official yt-dlp fallback binary.",
         "targetAbi": "12.0.0.0",
         "sourceUrl": "https://github.com/ccook45/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.4.20/xThemeSong_v1.4.20.zip"
