@@ -310,7 +310,7 @@ namespace Jellyfin.Plugin.xThemeSong.Api
             }
 
             // Check permissions
-            if (!await HasThemeManagementPermission(item))
+            if (!HasThemeManagementPermission(item))
             {
                 return Forbid();
             }
