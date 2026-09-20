@@ -136,43 +136,36 @@ namespace Jellyfin.Plugin.xThemeSong.Services
                 cleanTitle,
                 queries.Length);
 
-            var results = new List<YouTubeSearchResult>();
-            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            // Run a small number of searches concurrently. This keeps the request count
+            // bounded while avoiding the latency of waiting for every query in sequence.
+            using var queryThrottle = new SemaphoreSlim(3, 3);
+            var queryTasks = queries.Select(query => SearchYouTubeQueryAsync(
+                query,
+                cleanTitle,
+                isMovie,
+                queryThrottle,
+                cancellationToken));
 
             try
             {
-                foreach (var query in queries)
+                var queryResults = await Task.WhenAll(queryTasks);
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var results = new List<YouTubeSearchResult>();
+                var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var queryResult in queryResults)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    _logger.LogInformation("YouTube theme search query: {Query}", query);
-
-                    var queryCount = 0;
-                    await foreach (var video in _youtube.Search.GetVideosAsync(query, cancellationToken))
+                    foreach (var result in queryResult)
                     {
-                        cancellationToken.ThrowIfCancellationRequested();
-
-                        var videoId = video.Id.Value;
-                        if (string.IsNullOrWhiteSpace(videoId) || !seen.Add(videoId))
+                        if (seen.Add(result.VideoId))
                         {
-                            continue;
-                        }
+                            results.Add(result);
 
-                        var score = ScoreThemeResult(cleanTitle, video.Title, video.Duration, isMovie);
-                        results.Add(new YouTubeSearchResult
-                        {
-                            VideoId = videoId,
-                            Title = video.Title,
-                            Channel = video.Author?.ChannelTitle ?? string.Empty,
-                            DurationSeconds = video.Duration?.TotalSeconds ?? 0,
-                            Url = $"https://www.youtube.com/watch?v={videoId}",
-                            ThumbnailUrl = $"https://i.ytimg.com/vi/{videoId}/hqdefault.jpg",
-                            MatchScore = score
-                        });
-
-                        // Pull enough candidates from every query to give the scorer a real choice.
-                        if (++queryCount >= 15 || results.Count >= 100)
-                        {
-                            break;
+                            if (results.Count >= 100)
+                            {
+                                break;
+                            }
                         }
                     }
 
@@ -182,41 +175,11 @@ namespace Jellyfin.Plugin.xThemeSong.Services
                     }
                 }
 
-                var topResults = results
+                return results
                     .OrderByDescending(r => r.MatchScore)
                     .ThenBy(r => r.DurationSeconds <= 0 ? double.MaxValue : r.DurationSeconds)
                     .Take(10)
                     .ToList();
-
-                // Hydrate only the candidates shown in the UI.
-                foreach (var result in topResults)
-                {
-                    try
-                    {
-                        var video = await _youtube.Videos.GetAsync(result.VideoId, cancellationToken);
-                        result.Title = video.Title;
-                        result.Channel = video.Author?.ChannelTitle ?? result.Channel;
-                        result.DurationSeconds = video.Duration?.TotalSeconds ?? result.DurationSeconds;
-                        result.Url = video.Url;
-                        result.ThumbnailUrl = $"https://i.ytimg.com/vi/{result.VideoId}/hqdefault.jpg";
-                        _logger.LogInformation(
-                            "Hydrated YouTube result {VideoId}: Title={Title}, Channel={Channel}, DurationSeconds={DurationSeconds}, MatchScore={MatchScore}",
-                            result.VideoId,
-                            result.Title,
-                            result.Channel,
-                            result.DurationSeconds,
-                            result.MatchScore);
-                    }
-                    catch (Exception ex) when (ex is not OperationCanceledException)
-                    {
-                        _logger.LogWarning(
-                            ex,
-                            "Could not hydrate YouTube search result {VideoId}; returning search metadata and direct verification link",
-                            result.VideoId);
-                    }
-                }
-
-                return topResults;
             }
             catch (OperationCanceledException)
             {
@@ -226,6 +189,69 @@ namespace Jellyfin.Plugin.xThemeSong.Services
             {
                 _logger.LogError(ex, "YouTube theme search failed for {Title}", title);
                 throw;
+            }
+        }
+
+        private async Task<List<YouTubeSearchResult>> SearchYouTubeQueryAsync(
+            string query,
+            string title,
+            bool isMovie,
+            SemaphoreSlim queryThrottle,
+            CancellationToken cancellationToken)
+        {
+            await queryThrottle.WaitAsync(cancellationToken);
+
+            try
+            {
+                _logger.LogInformation("YouTube theme search query: {Query}", query);
+
+                var results = new List<YouTubeSearchResult>();
+                var queryCount = 0;
+
+                await foreach (var video in _youtube.Search.GetVideosAsync(query, cancellationToken))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    var videoId = video.Id.Value;
+                    if (string.IsNullOrWhiteSpace(videoId))
+                    {
+                        continue;
+                    }
+
+                    var score = ScoreThemeResult(title, video.Title, video.Duration, isMovie);
+                    results.Add(new YouTubeSearchResult
+                    {
+                        VideoId = videoId,
+                        Title = video.Title,
+                        Channel = video.Author?.ChannelTitle ?? string.Empty,
+                        DurationSeconds = video.Duration?.TotalSeconds ?? 0,
+                        Url = $"https://www.youtube.com/watch?v={videoId}",
+                        ThumbnailUrl = $"https://i.ytimg.com/vi/{videoId}/hqdefault.jpg",
+                        MatchScore = score
+                    });
+
+                    // Pull enough candidates from every query to give the scorer a real choice.
+                    if (++queryCount >= 15)
+                    {
+                        break;
+                    }
+                }
+
+                return results;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                // A single query failing should not make the whole search fail.
+                _logger.LogWarning(ex, "YouTube theme search query failed: {Query}", query);
+                return new List<YouTubeSearchResult>();
+            }
+            finally
+            {
+                queryThrottle.Release();
             }
         }
 
