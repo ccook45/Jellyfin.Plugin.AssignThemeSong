@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Jellyfin.Data;
 using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.xThemeSong.Models;
