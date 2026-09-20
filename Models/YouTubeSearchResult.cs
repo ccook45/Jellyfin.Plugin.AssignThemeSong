@@ -9,7 +9,7 @@ namespace Jellyfin.Plugin.xThemeSong.Models
         public string VideoId { get; set; } = string.Empty;
         public string Title { get; set; } = string.Empty;
         public string Channel { get; set; } = string.Empty;
-        public TimeSpan? Duration { get; set; }
+        public double DurationSeconds { get; set; }
         public string Url { get; set; } = string.Empty;
         public string ThumbnailUrl { get; set; } = string.Empty;
         public int MatchScore { get; set; }
