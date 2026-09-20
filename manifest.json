@@ -1,13 +1,20 @@
-﻿[
+[
   {
     "name": "xThemeSong",
     "guid": "97db7543-d64d-45e1-b2e7-62729b56371f",
     "overview": "Download theme songs from YouTube or upload custom MP3s for your media library",
     "description": "A plugin that automatically downloads theme songs from YouTube by user provided video ID/URL or allows uploading custom MP3 files. Theme songs are saved as theme.mp3 in media folders along with metadata in theme.json files. Features modern UI with loading animations, audio player, and drag-and-drop upload.",
-    "owner": "Kirtan Patel",
+    "owner": "ccook45",
     "category": "General",
     "imageUrl": "https://raw.githubusercontent.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/main/images/icon.png",
     "versions": [
+      {
+        "version": "1.4.0.0",
+        "checksum": "64F9E7B0EED1CA4775CE482EB97AFA10",
+        "changelog": "v1.4.0: Jellyfin 12 compatibility; migrated to .NET 10 and Jellyfin 12.0 APIs.",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/ccook45/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.4.0/xThemeSong_v1.4.0.zip"
+      },
       {
         "version": "1.3.2.0",
         "checksum": "354BAA53FD117EFB14AACEA91715E041",
@@ -17,131 +24,131 @@
       },
       {
         "version": "1.3.1.0",
-          "checksum": "464f827f609226937a334a9ce72847f6",
-          "changelog": "v1.3.1: Fixed media library filter buttons (Movies/TV Shows) and search by title not working correctly. Fixed type matching between API (Series) and UI (TV Shows).",
-          "targetAbi": "10.11.0.0",
-          "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.3.1/xThemeSong_v1.3.1.zip",
-          "timestamp": "2026-07-02T11:18:00Z"
+        "checksum": "464f827f609226937a334a9ce72847f6",
+        "changelog": "v1.3.1: Fixed media library filter buttons (Movies/TV Shows) and search by title not working correctly. Fixed type matching between API (Series) and UI (TV Shows).",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.3.1/xThemeSong_v1.3.1.zip",
+        "timestamp": "2026-07-02T11:18:00Z"
       },
       {
-          "version": "1.3.0.0",
-          "checksum": "1ba21310e4904af4e80d9bb17a69cd1e",
-          "changelog": "v1.3.0: Major update - Added season/collection-level theme inheritance, media library filters (with/without theme, search), poster thumbnails in library view, library type tabs (Movies/TV Shows), and minimized logging for cleaner output.",
-          "targetAbi": "10.11.0.0",
-          "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.3.0/xThemeSong_v1.3.0.zip",
-          "timestamp": "2026-07-02T10:43:00Z"
+        "version": "1.3.0.0",
+        "checksum": "1ba21310e4904af4e80d9bb17a69cd1e",
+        "changelog": "v1.3.0: Major update - Added season/collection-level theme inheritance, media library filters (with/without theme, search), poster thumbnails in library view, library type tabs (Movies/TV Shows), and minimized logging for cleaner output.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.3.0/xThemeSong_v1.3.0.zip",
+        "timestamp": "2026-07-02T10:43:00Z"
       },
       {
-          "version": "1.2.10.0",
-          "checksum": "92410c5c8d053f500adfa472a6f4d8a7",
-          "changelog": "v1.2.10: Fixed volume/duration never applying (theme songs served at /Audio/{id}/universal — now uses viewshow-timing detection). Fixed enable/disable checkbox inconsistency (server prefs always-sync to localStorage on load). Persistent volumechange guard with ownVolumeChange flag + setTimeout fallbacks. Studied jellyfin-web source + PR #6673.",
-          "targetAbi": "10.11.0.0",
-          "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.2.10/xThemeSong_v1.2.10.0.zip",
-          "timestamp": "2026-02-27T13:40:00Z"
+        "version": "1.2.10.0",
+        "checksum": "92410c5c8d053f500adfa472a6f4d8a7",
+        "changelog": "v1.2.10: Fixed volume/duration never applying (theme songs served at /Audio/{id}/universal — now uses viewshow-timing detection). Fixed enable/disable checkbox inconsistency (server prefs always-sync to localStorage on load). Persistent volumechange guard with ownVolumeChange flag + setTimeout fallbacks. Studied jellyfin-web source + PR #6673.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.2.10/xThemeSong_v1.2.10.0.zip",
+        "timestamp": "2026-02-27T13:40:00Z"
       },
       {
-          "version": "1.2.9.0",
-          "checksum": "ba48bdc0786d2f6d417a107b920e2396",
-          "changelog": "v1.2.9: Fixed enableThemeSongs sync — now correctly reads/writes Jellyfin native localStorage key ({userId}-enableThemeSongs) instead of DisplayPreferences, matching themeMediaPlayer.js source of truth exactly.",
-          "targetAbi": "10.11.0.0",
-          "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.2.9/xThemeSong_v1.2.9.0.zip",
-          "timestamp": "2026-02-27T06:40:00Z"
+        "version": "1.2.9.0",
+        "checksum": "ba48bdc0786d2f6d417a107b920e2396",
+        "changelog": "v1.2.9: Fixed enableThemeSongs sync — now correctly reads/writes Jellyfin native localStorage key ({userId}-enableThemeSongs) instead of DisplayPreferences, matching themeMediaPlayer.js source of truth exactly.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.2.9/xThemeSong_v1.2.9.0.zip",
+        "timestamp": "2026-02-27T06:40:00Z"
       },
       {
-          "version": "1.2.8.0",
-          "checksum": "09c237ffa61e070be3a0edcd23d28be4",
-          "changelog": "v1.2.8: Native preferences dialog, fixed sidebar link, synced with Jellyfin native theme song setting, correct assembly version.",
-          "targetAbi": "10.11.0.0",
-          "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.2.8/xThemeSong_v1.2.8.zip",
-          "timestamp": "2026-02-27T05:30:00Z"
+        "version": "1.2.8.0",
+        "checksum": "09c237ffa61e070be3a0edcd23d28be4",
+        "changelog": "v1.2.8: Native preferences dialog, fixed sidebar link, synced with Jellyfin native theme song setting, correct assembly version.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.2.8/xThemeSong_v1.2.8.zip",
+        "timestamp": "2026-02-27T05:30:00Z"
       },
       {
-          "version": "1.2.7.0",
-          "checksum": "00cc611b37b0e4a4cc4354946be48940",
-          "changelog": "v1.2.7: Added native cleanup configuration for uninstallation so sidebar settings are correctly scrubbed upon removal.",
-          "targetAbi": "10.11.0.0",
-          "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.2.7/xThemeSong_v1.2.7.zip",
-          "timestamp": "2026-02-27T04:40:00Z"
+        "version": "1.2.7.0",
+        "checksum": "00cc611b37b0e4a4cc4354946be48940",
+        "changelog": "v1.2.7: Added native cleanup configuration for uninstallation so sidebar settings are correctly scrubbed upon removal.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.2.7/xThemeSong_v1.2.7.zip",
+        "timestamp": "2026-02-27T04:40:00Z"
       },
       {
-          "version": "1.2.6.0",
-          "checksum": "a907cfb6b354df38acbe2e694537c7ae",
-          "changelog": "v1.2.6: Updated YoutubeExplode. Fixed user preferences saving issue (deserialization case-sensitivity). Fixed general settings PermissionMode saving. Implemented proper jellyfin-plugin-pages integration for User Preferences access.",
-          "targetAbi": "10.11.0.0",
-          "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.2.6/xThemeSong_v1.2.6.zip",
-          "timestamp": "2026-02-26T12:35:00Z"
+        "version": "1.2.6.0",
+        "checksum": "a907cfb6b354df38acbe2e694537c7ae",
+        "changelog": "v1.2.6: Updated YoutubeExplode. Fixed user preferences saving issue (deserialization case-sensitivity). Fixed general settings PermissionMode saving. Implemented proper jellyfin-plugin-pages integration for User Preferences access.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.2.6/xThemeSong_v1.2.6.zip",
+        "timestamp": "2026-02-26T12:35:00Z"
       },
       {
-          "version": "1.2.5.0",
-          "checksum": "ef3f0d0764ad75428ae1fd0f8ef5881e",
-          "changelog": "v1.2.5: Fixed permission check with parseInt, JSON casing, non-admin route for user prefs",
-          "targetAbi": "10.11.0.0",
-          "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.2.5/xThemeSong_v1.2.5.zip",
-          "timestamp": "2026-01-26T12:24:00Z"
+        "version": "1.2.5.0",
+        "checksum": "ef3f0d0764ad75428ae1fd0f8ef5881e",
+        "changelog": "v1.2.5: Fixed permission check with parseInt, JSON casing, non-admin route for user prefs",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.2.5/xThemeSong_v1.2.5.zip",
+        "timestamp": "2026-01-26T12:24:00Z"
       },
       {
-          "version": "1.2.4.0",
-          "checksum": "25aa4412216ef98262fff7d6e2dd93c1",
-          "changelog": "v1.2.4: Fixed page conflicts - admin config and user preferences now separate pages",
-          "targetAbi": "10.11.0.0",
-          "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.2.4/xThemeSong_v1.2.4.zip",
-          "timestamp": "2025-12-27T09:25:00Z"
+        "version": "1.2.4.0",
+        "checksum": "25aa4412216ef98262fff7d6e2dd93c1",
+        "changelog": "v1.2.4: Fixed page conflicts - admin config and user preferences now separate pages",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.2.4/xThemeSong_v1.2.4.zip",
+        "timestamp": "2025-12-27T09:25:00Z"
       },
       {
-          "version": "1.2.3.0",
-          "checksum": "62d222a84b45dedcadc4bb33c72bfbe5",
-          "changelog": "v1.2.3: User preferences accessible in sidebar - EnableInMainMenu + client-side sidebar injection",
-          "targetAbi": "10.11.0.0",
-          "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.2.3/xThemeSong_v1.2.3.zip",
-          "timestamp": "2025-12-27T08:40:00Z"
+        "version": "1.2.3.0",
+        "checksum": "62d222a84b45dedcadc4bb33c72bfbe5",
+        "changelog": "v1.2.3: User preferences accessible in sidebar - EnableInMainMenu + client-side sidebar injection",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.2.3/xThemeSong_v1.2.3.zip",
+        "timestamp": "2025-12-27T08:40:00Z"
       },
       {
-          "version": "1.2.2.0",
-          "checksum": "f840854446ed686fddf85aee5149095b",
-          "changelog": "v1.2.2: Fixed user preferences userId parameter, client-side permission checks hide menu for non-admins",
-          "targetAbi": "10.11.0.0",
-          "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.2.2/xThemeSong_v1.2.2.zip",
-          "timestamp": "2025-12-25T11:30:00Z"
+        "version": "1.2.2.0",
+        "checksum": "f840854446ed686fddf85aee5149095b",
+        "changelog": "v1.2.2: Fixed user preferences userId parameter, client-side permission checks hide menu for non-admins",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.2.2/xThemeSong_v1.2.2.zip",
+        "timestamp": "2025-12-25T11:30:00Z"
       },
       {
-          "version": "1.2.1.0",
-          "checksum": "b7deda7b0113cf9a37d600cc6399725e",
-          "changelog": "v1.2.1: Fixed user preferences menu visibility and permission checks - now properly restricts non-admin users",
-          "targetAbi": "10.11.0.0",
-          "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.2.1/xThemeSong_v1.2.1.zip",
-          "timestamp": "2025-12-25T10:50:00Z"
+        "version": "1.2.1.0",
+        "checksum": "b7deda7b0113cf9a37d600cc6399725e",
+        "changelog": "v1.2.1: Fixed user preferences menu visibility and permission checks - now properly restricts non-admin users",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.2.1/xThemeSong_v1.2.1.zip",
+        "timestamp": "2025-12-25T10:50:00Z"
       },
       {
-          "version": "1.2.0.0",
-          "checksum": "0163a46343f356c880c8d1da282dbe60",
-          "changelog": "v1.2.0: Major update - Fixed scheduled task error, Export/Import themes, Role-Based Access Control, Per-User Preferences, reduced warnings from 5 to 1",
-          "targetAbi": "10.11.0.0",
-          "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.2.0/xThemeSong_v1.2.0.zip",
-          "timestamp": "2025-12-25T09:30:00Z"
+        "version": "1.2.0.0",
+        "checksum": "0163a46343f356c880c8d1da282dbe60",
+        "changelog": "v1.2.0: Major update - Fixed scheduled task error, Export/Import themes, Role-Based Access Control, Per-User Preferences, reduced warnings from 5 to 1",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.2.0/xThemeSong_v1.2.0.zip",
+        "timestamp": "2025-12-25T09:30:00Z"
       },
       {
-          "version": "1.1.0.0",
-          "checksum": "e6ad5f1311ecb0f50dac97c6427897c6",
-          "changelog": "v1.1.0: Enhanced UI - tabbed settings page, improved Media Library overview with inline audio players, bulk YouTube URL assignment, better table styling",
-          "targetAbi": "10.11.0.0",
-          "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.1.0/xThemeSong_v1.1.0.zip",
-          "timestamp": "2025-12-03T14:45:00Z"
+        "version": "1.1.0.0",
+        "checksum": "e6ad5f1311ecb0f50dac97c6427897c6",
+        "changelog": "v1.1.0: Enhanced UI - tabbed settings page, improved Media Library overview with inline audio players, bulk YouTube URL assignment, better table styling",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.1.0/xThemeSong_v1.1.0.zip",
+        "timestamp": "2025-12-03T14:45:00Z"
       },
       {
-          "version": "1.0.6.0",
-          "checksum": "73d9709d7b4cdfe68d1c8ddfd23e3772",
-          "changelog": "v1.0.6: Fix config page tabs and improve Media Library UI",
-          "targetAbi": "10.11.0.0",
-          "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.0.6/xThemeSong_v1.0.6.zip",
-          "timestamp": "2025-12-03T13:45:00Z"
+        "version": "1.0.6.0",
+        "checksum": "73d9709d7b4cdfe68d1c8ddfd23e3772",
+        "changelog": "v1.0.6: Fix config page tabs and improve Media Library UI",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.0.6/xThemeSong_v1.0.6.zip",
+        "timestamp": "2025-12-03T13:45:00Z"
       },
       {
-          "version": "1.0.5.0",
-          "checksum": "9453c4b55f37140eee993e1dd788bb21",
-          "changelog": "v1.0.5: Fix Media Library overview - use proper item type filtering",
-          "targetAbi": "10.11.0.0",
-          "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.0.5/xThemeSong_v1.0.5.zip",
-          "timestamp": "2025-12-03T13:30:00Z"
+        "version": "1.0.5.0",
+        "checksum": "9453c4b55f37140eee993e1dd788bb21",
+        "changelog": "v1.0.5: Fix Media Library overview - use proper item type filtering",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/kirtan3d/Jellyfin.Plugin.AssignThemeSong/releases/download/v1.0.5/xThemeSong_v1.0.5.zip",
+        "timestamp": "2025-12-03T13:30:00Z"
       },
       {
         "version": "1.0.4.0",
